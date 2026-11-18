@@ -523,4 +523,65 @@ void main() {
     expect(find.text('Nhà mình'), findsOneWidget);
     expect(find.bySemanticsLabel('Chụp'), findsOneWidget);
   });
+
+  testWidgets('xóa nhóm khi còn khoản chưa trả: báo lý do, nhóm còn nguyên', (
+    tester,
+  ) async {
+    await _launch(tester);
+    await _signIn(tester);
+    final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+
+    await tester.tap(find.byTooltip('Hồ sơ'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Xóa nhóm'), 200);
+    // Nút nằm cuối trang; cuộn cho nó vào hẳn màn hình rồi mới bấm.
+    await tester.ensureVisible(find.text('Xóa nhóm'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Xóa nhóm'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Chưa xóa nhóm được'), findsOneWidget);
+    expect(
+      find.textContaining('Trọ 12 còn 3 khoản chưa trả xong'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Đóng'));
+    await tester.pumpAndSettle();
+    expect(cubit.state.group.name, 'Trọ 12');
+  });
+
+  testWidgets(
+    'người tạo xóa nhóm đã sòng phẳng: xác nhận rồi về nhóm còn lại',
+    (tester) async {
+      await _launch(tester);
+      await _signIn(tester);
+      final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+      cubit.createGroup(name: 'Đà Lạt', type: GroupType.trip);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Hồ sơ'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Xóa nhóm'), 200);
+      // Nút nằm cuối trang; cuộn cho nó vào hẳn màn hình rồi mới bấm.
+      await tester.ensureVisible(find.text('Xóa nhóm'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Xóa nhóm'));
+      await tester.pumpAndSettle();
+      expect(find.text('Xóa nhóm Đà Lạt?'), findsOneWidget);
+      expect(find.textContaining('không hoàn tác được'), findsOneWidget);
+
+      await tester.tap(find.text('Giữ nhóm'));
+      await tester.pumpAndSettle();
+      expect(cubit.state.group.name, 'Đà Lạt');
+
+      await tester.tap(find.text('Xóa nhóm'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Xóa nhóm').last);
+      await tester.pumpAndSettle();
+
+      expect(cubit.state.groups.map((g) => g.name), ['Trọ 12']);
+      expect(find.text('Hồ sơ'), findsNothing);
+      expect(find.text('Trọ 12'), findsOneWidget);
+    },
+  );
 }

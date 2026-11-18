@@ -68,6 +68,84 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
+  /// Báo vì sao chưa làm được việc vừa bấm, kèm lối sang màn số dư.
+  Future<void> _explainBlocked(
+    BuildContext context, {
+    required String title,
+    required String message,
+  }) async {
+    final seeBalance = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Đóng'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Xem số dư'),
+          ),
+        ],
+      ),
+    );
+    if (seeBalance == true && context.mounted) {
+      await Navigator.of(context)
+          .push(MaterialPageRoute<void>(builder: (_) => const BalanceScreen()));
+    }
+  }
+
+  /// Xóa nhóm đang mở với mọi thành viên. Chỉ người tạo nhóm thấy nút này.
+  Future<void> _deleteGroup(BuildContext context) async {
+    final cubit = context.read<LedgerCubit>();
+    final state = cubit.state;
+    final groupName = state.group.name;
+    final memberCount = state.group.members.length;
+
+    if (!state.canDeleteGroup) {
+      await _explainBlocked(
+        context,
+        title: 'Chưa xóa nhóm được',
+        message:
+            '$groupName còn ${state.transfers.length} khoản chưa trả xong. '
+            'Khi cả nhóm đã sòng phẳng bạn mới xóa nhóm được.',
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Xóa nhóm $groupName?'),
+        content: Text(
+          memberCount > 1
+              ? 'Mọi khoản chi, ảnh và bình luận của nhóm sẽ bị xóa với cả '
+                    '$memberCount thành viên. Việc này không hoàn tác được.'
+              : 'Mọi khoản chi, ảnh và bình luận của nhóm sẽ bị xóa. '
+                    'Việc này không hoàn tác được.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Giữ nhóm'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: TachColors.danger),
+            child: const Text('Xóa nhóm'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    if (cubit.deleteGroup()) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+  }
+
   /// Rời nhóm đang mở. Còn khoản chưa sòng phẳng thì chỉ báo lý do.
   Future<void> _leaveGroup(BuildContext context) async {
     final cubit = context.read<LedgerCubit>();
@@ -76,34 +154,15 @@ class ProfileScreen extends StatelessWidget {
 
     if (!state.canLeaveGroup) {
       final amount = formatVnd(state.myNet.abs());
-      final seeBalance = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Chưa rời nhóm được'),
-          content: Text(
-            state.myNet < 0
-                ? 'Bạn còn cần trả $amount trong $groupName. '
-                      'Trả xong rồi bạn mới rời nhóm được.'
-                : 'Mọi người còn cần trả bạn $amount trong $groupName. '
-                      'Nhận đủ rồi bạn mới rời nhóm được.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Đóng'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Xem số dư'),
-            ),
-          ],
-        ),
+      await _explainBlocked(
+        context,
+        title: 'Chưa rời nhóm được',
+        message: state.myNet < 0
+            ? 'Bạn còn cần trả $amount trong $groupName. '
+                  'Trả xong rồi bạn mới rời nhóm được.'
+            : 'Mọi người còn cần trả bạn $amount trong $groupName. '
+                  'Nhận đủ rồi bạn mới rời nhóm được.',
       );
-      if (seeBalance == true && context.mounted) {
-        await Navigator.of(
-          context,
-        ).push(MaterialPageRoute<void>(builder: (_) => const BalanceScreen()));
-      }
       return;
     }
 
@@ -305,6 +364,15 @@ class ProfileScreen extends StatelessWidget {
               ),
               child: const Text('Rời nhóm'),
             ),
+            if (state.isGroupCreator)
+              TextButton(
+                onPressed: () => _deleteGroup(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: TachColors.danger,
+                  minimumSize: const Size(64, 48),
+                ),
+                child: const Text('Xóa nhóm'),
+              ),
           ],
           const SizedBox(height: 36),
           OutlinedButton(onPressed: onSignOut, child: const Text('Đăng xuất')),

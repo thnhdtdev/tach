@@ -35,6 +35,7 @@ const _noGroup = GroupLedger(
     code: '',
     type: GroupType.room,
     inviteCode: '',
+    createdBy: '',
     members: [],
   ),
 );
@@ -106,6 +107,13 @@ class LedgerState {
 
   /// Chỉ rời được nhóm khi không còn nợ ai và không ai còn nợ mình.
   bool get canLeaveGroup => hasGroup && myNet == 0;
+
+  /// Người dùng có phải người tạo nhóm đang mở không.
+  bool get isGroupCreator => hasGroup && group.createdBy == meId;
+
+  /// Chỉ người tạo nhóm xóa được nhóm, và chỉ khi cả nhóm đã sòng phẳng, để
+  /// không ai mất dấu khoản nợ còn dang dở.
+  bool get canDeleteGroup => isGroupCreator && transfers.isEmpty;
 
   int get totalSpent => expenses.fold(0, (sum, e) => sum + e.amount);
 
@@ -293,6 +301,23 @@ class LedgerCubit extends Cubit<LedgerState> {
   /// Trả về `false` và không làm gì khi còn khoản chưa sòng phẳng.
   bool leaveGroup() {
     if (!state.canLeaveGroup) return false;
+    _closeCurrentGroup();
+    return true;
+  }
+
+  /// Xóa nhóm đang mở với mọi thành viên, rồi mở nhóm còn lại đầu tiên.
+  ///
+  /// Trả về `false` và không làm gì khi người dùng không phải người tạo nhóm
+  /// hoặc nhóm còn khoản chưa trả xong.
+  bool deleteGroup() {
+    if (!state.canDeleteGroup) return false;
+    _closeCurrentGroup();
+    return true;
+  }
+
+  /// Bỏ nhóm đang mở khỏi danh sách. Khi chỉ giữ dữ liệu trong bộ nhớ thì rời
+  /// và xóa giống nhau; với máy chủ, xóa còn gỡ nhóm ở mọi thành viên.
+  void _closeCurrentGroup() {
     final remaining = [
       for (final l in state.ledgers)
         if (l.group.id != state.currentGroupId) l,
@@ -303,7 +328,6 @@ class LedgerCubit extends Cubit<LedgerState> {
         currentGroupId: remaining.isEmpty ? '' : remaining.first.group.id,
       ),
     );
-    return true;
   }
 
   /// Tạo nhóm mới chỉ có người dùng, rồi mở luôn nhóm đó.
@@ -318,6 +342,7 @@ class LedgerCubit extends Cubit<LedgerState> {
         for (var i = 0; i < _inviteLength; i++)
           _inviteAlphabet[_random.nextInt(_inviteAlphabet.length)],
       ].join(),
+      createdBy: state.meId,
       members: [state.me],
     );
     emit(

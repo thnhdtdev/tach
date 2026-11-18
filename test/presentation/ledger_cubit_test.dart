@@ -226,6 +226,49 @@ void main() {
     });
   });
 
+  group('xóa nhóm', () {
+    test('nhóm còn khoản chưa trả xong thì chưa xóa được', () {
+      expect(cubit.state.isGroupCreator, isTrue);
+      expect(cubit.state.canDeleteGroup, isFalse);
+      expect(cubit.deleteGroup(), isFalse);
+      expect(cubit.state.groups, hasLength(1));
+    });
+
+    test('người tạo xóa nhóm đã sòng phẳng thì mở nhóm còn lại', () {
+      final trip = cubit.createGroup(name: 'Đà Lạt', type: GroupType.trip);
+      expect(trip.createdBy, cubit.state.meId);
+      expect(cubit.state.canDeleteGroup, isTrue);
+
+      expect(cubit.deleteGroup(), isTrue);
+      expect(cubit.state.groups.map((g) => g.name), ['Trọ 12']);
+      expect(cubit.state.group.name, 'Trọ 12');
+    });
+
+    test('nhóm vừa có khoản chi chưa chia xong thì khóa xóa lại', () async {
+      final solo = LedgerCubit(_SoloGroupRepository());
+      addTearDown(solo.close);
+      await solo.load();
+      final mine = solo.createGroup(name: 'Nhà mình', type: GroupType.family);
+      expect(solo.state.canDeleteGroup, isTrue);
+
+      // Một mình trong nhóm thì ghi bao nhiêu cũng không ai nợ ai.
+      solo.addExpense(amount: 50000, note: 'Rau', participantIds: ['u-an']);
+      expect(solo.state.canDeleteGroup, isTrue);
+      expect(solo.state.group.id, mine.id);
+    });
+
+    test('không phải người tạo thì không xóa được dù đã sòng phẳng', () async {
+      final solo = LedgerCubit(_SoloGroupRepository());
+      addTearDown(solo.close);
+      await solo.load();
+
+      expect(solo.state.transfers, isEmpty);
+      expect(solo.state.isGroupCreator, isFalse);
+      expect(solo.deleteGroup(), isFalse);
+      expect(solo.state.hasGroup, isTrue);
+    });
+  });
+
   test('báo đã chuyển thì chờ xác nhận; xác nhận xong mới hết nợ', () {
     final transfer = cubit.state.transfers.singleWhere(
       (t) => t.fromId == cubit.state.meId,
@@ -250,7 +293,7 @@ void main() {
   });
 }
 
-/// Người dùng chỉ ở một nhóm chưa có khoản chi nào.
+/// Người dùng chỉ ở một nhóm chưa có khoản chi nào, do người khác tạo.
 class _SoloGroupRepository implements GroupRepository {
   @override
   Future<GroupSnapshot> loadCurrentGroup() async {
@@ -261,7 +304,11 @@ class _SoloGroupRepository implements GroupRepository {
         code: 'MOTMINH',
         type: GroupType.room,
         inviteCode: 'ABCDEF',
-        members: [Member(id: 'u-an', name: 'An')],
+        createdBy: 'u-minh',
+        members: [
+          Member(id: 'u-an', name: 'An'),
+          Member(id: 'u-minh', name: 'Minh'),
+        ],
       ),
       currentUserId: 'u-an',
       expenses: [],

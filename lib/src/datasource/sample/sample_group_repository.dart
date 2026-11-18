@@ -53,6 +53,7 @@ class SampleGroupRepository implements GroupRepository {
         code: 'TRO12',
         type: GroupType.room,
         inviteCode: 'K7M2QP',
+        createdBy: _me,
         members: [
           Member(
             id: _me,

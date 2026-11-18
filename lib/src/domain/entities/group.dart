@@ -58,6 +58,7 @@ class Group {
     required this.code,
     required this.type,
     required this.inviteCode,
+    required this.createdBy,
     required this.members,
   });
 
@@ -70,6 +71,9 @@ class Group {
 
   /// Mã gửi cho người khác để họ vào nhóm.
   final String inviteCode;
+
+  /// Id người tạo nhóm. Chỉ người này được xóa nhóm.
+  final String createdBy;
   final List<Member> members;
 
   /// Đổi tên không đổi [code], để nội dung chuyển khoản của nhóm giữ nguyên.
@@ -79,6 +83,7 @@ class Group {
     code: code,
     type: type,
     inviteCode: inviteCode,
+    createdBy: createdBy,
     members: members ?? this.members,
   );
 }

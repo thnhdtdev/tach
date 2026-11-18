@@ -52,8 +52,10 @@ lib/
 ## Trạng thái hiện tại
 
 Giao diện MVP đã dựng xong và chạy bằng dữ liệu mẫu trong bộ nhớ
-(`lib/src/datasource/sample/`). Chưa nối: Supabase, camera thật, đăng nhập,
-widget màn hình chính. Ảnh khoản chi đang là ảnh minh họa vẽ sẵn.
+(`lib/src/datasource/sample/`). Camera thật đã nối: ảnh chụp đi theo khoản chi
+nhưng chỉ giữ trong bộ nhớ. Chưa nối: Supabase, đăng nhập, widget màn hình
+chính. Các khoản mẫu có sẵn dùng ảnh minh họa vẽ sẵn; trên máy không có camera
+(trình giả lập), bản debug cho chụp ảnh mẫu.
 
 Font chữ là Montserrat, giấy phép SIL Open Font License
 (`assets/fonts/OFL.txt`).

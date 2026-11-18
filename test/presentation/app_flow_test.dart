@@ -9,6 +9,7 @@ import 'package:tach/src/app.dart';
 import 'package:tach/src/dependency/injection.dart';
 import 'package:tach/src/domain/entities/group.dart';
 import 'package:tach/src/services/avatar/avatar_picker.dart';
+import 'package:tach/src/services/camera/capture_camera.dart';
 import 'package:tach/src/presentation/home/home_screen.dart';
 import 'package:tach/src/presentation/ledger/ledger_cubit.dart';
 
@@ -31,7 +32,54 @@ class _FakeAvatarPicker implements AvatarPicker {
   }
 }
 
-Future<void> _launch(WidgetTester tester, {bool seenOnboarding = true}) async {
+/// Camera giả: không đụng tới phần cứng, ghi lại các lần mở và nhả.
+class _FakeCamera implements CaptureCamera {
+  _FakeCamera(this.status);
+
+  CameraStatus status;
+  var opens = 0;
+  var closes = 0;
+  var photoFails = false;
+  var hasFlash = true;
+  bool? flashOn;
+
+  @override
+  Future<CameraStatus> open() async {
+    opens++;
+    return status;
+  }
+
+  @override
+  Widget preview() => const ColoredBox(
+    key: ValueKey('live-preview'),
+    color: Color(0xFF223344),
+    child: SizedBox.expand(),
+  );
+
+  @override
+  Future<Uint8List> takePhoto() async {
+    if (photoFails) throw Exception('Camera bận');
+    return _tinyPng;
+  }
+
+  @override
+  Future<bool> setFlash(bool on) async {
+    if (!hasFlash) return false;
+    flashOn = on;
+    return true;
+  }
+
+  @override
+  Future<void> close() async => closes++;
+}
+
+late _FakeCamera _camera;
+
+Future<void> _launch(
+  WidgetTester tester, {
+  bool seenOnboarding = true,
+  CameraStatus cameraStatus = CameraStatus.ready,
+}) async {
   tester.view.physicalSize = const Size(1170, 2532);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
@@ -41,6 +89,10 @@ Future<void> _launch(WidgetTester tester, {bool seenOnboarding = true}) async {
   });
   await getIt.reset();
   configureDependencies();
+  _camera = _FakeCamera(cameraStatus);
+  getIt
+    ..unregister<CaptureCamera>()
+    ..registerFactory<CaptureCamera>(() => _camera);
 
   await tester.pumpWidget(const TachApp());
   await tester.pumpAndSettle();
@@ -584,4 +636,165 @@ void main() {
       expect(find.text('Trọ 12'), findsOneWidget);
     },
   );
+
+  group('camera', () {
+    testWidgets('chụp ảnh thật: ảnh đi theo khoản chi lên bảng tin', (
+      tester,
+    ) async {
+      await _launch(tester);
+      await _signIn(tester);
+      final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+      expect(find.byKey(const ValueKey('live-preview')), findsOneWidget);
+      expect(_camera.opens, 1);
+
+      await tester.tap(find.bySemanticsLabel('Chụp'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('live-preview')), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('key-5')));
+      await tester.tap(find.byKey(const ValueKey('key-0')));
+      await tester.pump();
+      await tester.tap(find.text('Xong'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Gửi'));
+      await tester.pump();
+
+      final added = cubit.state.expenses.first;
+      expect(added.amount, 50000);
+      expect(added.photoBytes, _tinyPng);
+      expect(added.hasPhoto, isTrue);
+      expect(find.byKey(const ValueKey('live-preview')), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('màn khác che thì nhả camera, quay lại thì mở lại', (
+      tester,
+    ) async {
+      await _launch(tester);
+      await _signIn(tester);
+      expect((_camera.opens, _camera.closes), (1, 0));
+
+      await tester.tap(find.byTooltip('Hồ sơ'));
+      await tester.pumpAndSettle();
+      expect(_camera.closes, 1);
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(_camera.opens, 2);
+      expect(find.byKey(const ValueKey('live-preview')), findsOneWidget);
+    });
+
+    testWidgets('app xuống nền thì nhả camera, mở lại app thì bật lại', (
+      tester,
+    ) async {
+      await _launch(tester);
+      await _signIn(tester);
+
+      // App ở nền không vẽ khung hình nào, nên chỉ kiểm tra camera đã nhả.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pumpAndSettle();
+      expect(_camera.closes, 1);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(_camera.opens, 2);
+      expect(find.byKey(const ValueKey('live-preview')), findsOneWidget);
+    });
+
+    testWidgets(
+      'chưa cấp quyền: báo cách bật, khóa nút chụp, vẫn ghi không ảnh',
+      (tester) async {
+        await _launch(tester, cameraStatus: CameraStatus.denied);
+        await _signIn(tester);
+        expect(find.text('Tach chưa được dùng camera'), findsOneWidget);
+
+        await tester.tap(find.bySemanticsLabel('Chụp'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Xong'), findsNothing);
+
+        await tester.tap(find.byTooltip('Ghi không cần ảnh'));
+        await tester.pumpAndSettle();
+        expect(find.text('Xong'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'được cấp quyền sau khi vào Cài đặt: quay lại app là có camera',
+      (tester) async {
+        await _launch(tester, cameraStatus: CameraStatus.denied);
+        await _signIn(tester);
+        expect(find.text('Tach chưa được dùng camera'), findsOneWidget);
+
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pumpAndSettle();
+        _camera.status = CameraStatus.ready;
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tach chưa được dùng camera'), findsNothing);
+        expect(find.byKey(const ValueKey('live-preview')), findsOneWidget);
+      },
+    );
+
+    testWidgets('máy không có camera (bản debug): nút chụp dùng ảnh mẫu', (
+      tester,
+    ) async {
+      await _launch(tester, cameraStatus: CameraStatus.unavailable);
+      await _signIn(tester);
+      final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+      expect(find.text('Máy này không có camera'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Chụp'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('key-2')));
+      await tester.pump();
+      await tester.tap(find.text('Xong'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Gửi'));
+      await tester.pump();
+
+      expect(cubit.state.expenses.first.photoUrl, 'sample:viewfinder');
+      expect(cubit.state.expenses.first.photoBytes, isNull);
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('chụp lỗi: báo thử lại và ở lại màn camera', (tester) async {
+      await _launch(tester);
+      await _signIn(tester);
+      _camera.photoFails = true;
+
+      await tester.tap(find.bySemanticsLabel('Chụp'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Không chụp được ảnh. Thử lại nhé.'), findsOneWidget);
+      expect(find.text('Xong'), findsNothing);
+
+      _camera.photoFails = false;
+      await tester.pump(const Duration(seconds: 3));
+      await tester.tap(find.bySemanticsLabel('Chụp'));
+      await tester.pumpAndSettle();
+      expect(find.text('Xong'), findsOneWidget);
+    });
+
+    testWidgets('đèn flash: bật được thì đổi nút, máy không có thì báo', (
+      tester,
+    ) async {
+      await _launch(tester);
+      await _signIn(tester);
+
+      await tester.tap(find.byTooltip('Bật đèn flash'));
+      await tester.pumpAndSettle();
+      expect(_camera.flashOn, isTrue);
+      expect(find.byTooltip('Tắt đèn flash'), findsOneWidget);
+
+      _camera.hasFlash = false;
+      await tester.tap(find.byTooltip('Tắt đèn flash'));
+      await tester.pump();
+      expect(find.text('Camera này không có đèn flash.'), findsOneWidget);
+      expect(find.byTooltip('Tắt đèn flash'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+    });
+  });
 }

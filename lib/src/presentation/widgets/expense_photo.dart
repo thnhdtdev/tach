@@ -1,15 +1,18 @@
+import 'dart:typed_data';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
 
 /// Ảnh của một khoản chi, lấp đầy khung chứa nó.
 ///
-/// Hiện chỉ vẽ ảnh mẫu (`sample:<tên>`) và ô thay thế cho khoản không có ảnh.
-/// Ảnh thật từ camera và từ máy chủ sẽ nối vào đây.
+/// Ưu tiên ảnh vừa chụp ([photoBytes]), rồi tới ảnh mẫu (`sample:<tên>`), cuối
+/// cùng là ô thay thế cho khoản không có ảnh. Ảnh từ máy chủ sẽ nối vào đây.
 class ExpensePhoto extends StatelessWidget {
-  const ExpensePhoto({super.key, required this.photoUrl});
+  const ExpensePhoto({super.key, required this.photoUrl, this.photoBytes});
 
   final String? photoUrl;
+  final Uint8List? photoBytes;
 
   static const _samples = {
     'sample:eggs': _Sample(
@@ -52,6 +55,26 @@ class ExpensePhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bytes = photoBytes;
+    if (bytes != null) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          // Giải mã ảnh ở cỡ gần với cỡ hiển thị để ô nhỏ không ngốn bộ nhớ.
+          final side = constraints.biggest.longestSide;
+          final pixels = side.isFinite
+              ? (side * MediaQuery.devicePixelRatioOf(context)).round()
+              : null;
+          return Image.memory(
+            bytes,
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+            cacheWidth: pixels,
+            errorBuilder: (_, _, _) => const _NoPhoto(),
+          );
+        },
+      );
+    }
+
     final url = photoUrl;
     if (url == null) return const _NoPhoto();
 

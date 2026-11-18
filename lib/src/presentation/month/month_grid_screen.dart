@@ -207,7 +207,10 @@ class _Tile extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              ExpensePhoto(photoUrl: expense.photoUrl),
+              ExpensePhoto(
+                photoUrl: expense.photoUrl,
+                photoBytes: expense.photoBytes,
+              ),
               const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

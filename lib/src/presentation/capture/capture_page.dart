@@ -1,11 +1,14 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/format/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../dependency/injection.dart';
+import '../../services/camera/capture_camera.dart';
 import '../ledger/ledger_cubit.dart';
 import '../widgets/expense_photo.dart';
 import '../widgets/member_avatar.dart';
@@ -15,7 +18,8 @@ enum _Stage { viewfinder, amount, people }
 
 /// Màn chính: camera, rồi gõ số tiền ngay trên ảnh, chọn người chia và gửi.
 ///
-/// Camera thật chưa được nối; khung ngắm đang hiện ảnh mẫu.
+/// Camera chỉ chạy khi màn này đang hiện và app đang mở; bị màn khác che hoặc
+/// app xuống nền thì nhả camera.
 class CapturePage extends StatefulWidget {
   const CapturePage({
     super.key,
@@ -35,15 +39,23 @@ class CapturePage extends StatefulWidget {
   State<CapturePage> createState() => _CapturePageState();
 }
 
-class _CapturePageState extends State<CapturePage> {
+class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   /// Số tiền tối đa 999.999.000đ.
   static const _maxDigits = 6;
 
   final _note = TextEditingController();
   final _noteFocus = FocusNode();
 
+  final CaptureCamera _camera = getIt<CaptureCamera>();
+  var _cameraStatus = CameraStatus.starting;
+  var _openingCamera = false;
+  var _appResumed = true;
+  var _routeCurrent = true;
+  var _takingPhoto = false;
+
   var _stage = _Stage.viewfinder;
   String? _photoUrl;
+  Uint8List? _photoBytes;
 
   /// Các chữ số đã gõ, tính theo nghìn đồng: "30" là 30.000đ.
   var _digits = '';
@@ -55,8 +67,64 @@ class _CapturePageState extends State<CapturePage> {
 
   int get _amount => _digits.isEmpty ? 0 : int.parse(_digits) * 1000;
 
+  /// Máy không có camera (trình giả lập): bản debug cho chụp ảnh mẫu để vẫn
+  /// thử được cả luồng ghi khoản chi.
+  bool get _useSamplePhoto =>
+      kDebugMode && _cameraStatus == CameraStatus.unavailable;
+
+  bool get _canShoot =>
+      !_takingPhoto && (_cameraStatus == CameraStatus.ready || _useSamplePhoto);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Màn khác (hồ sơ, số dư, bảng chọn nhóm...) đang che thì nhả camera.
+    _routeCurrent = ModalRoute.isCurrentOf(context) ?? true;
+    _syncCamera();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appResumed = state == AppLifecycleState.resumed;
+    _syncCamera();
+  }
+
+  /// Mở hoặc nhả camera cho khớp với việc màn này có đang được nhìn thấy không.
+  Future<void> _syncCamera() async {
+    final wanted = _appResumed && _routeCurrent;
+    if (!wanted) {
+      // Đang mở dở (ví dụ hộp xin quyền đang hiện) thì để yên; mở xong sẽ tự
+      // kiểm tra lại bên dưới.
+      if (_cameraStatus != CameraStatus.ready) return;
+      setState(() => _cameraStatus = CameraStatus.starting);
+      await _camera.close();
+      return;
+    }
+    if (_openingCamera || _cameraStatus == CameraStatus.ready) return;
+
+    _openingCamera = true;
+    final status = await _camera.open();
+    _openingCamera = false;
+    if (!mounted) return;
+
+    if (!(_appResumed && _routeCurrent)) {
+      await _camera.close();
+      return;
+    }
+    setState(() => _cameraStatus = status);
+    if (status == CameraStatus.ready && _flashOn) await _camera.setFlash(true);
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _camera.close();
     _toastTimer?.cancel();
     _note.dispose();
     _noteFocus.dispose();
@@ -70,15 +138,59 @@ class _CapturePageState extends State<CapturePage> {
     if (wasBusy != isBusy) widget.onBusyChanged(isBusy);
   }
 
-  void _start({required String? photoUrl}) {
+  void _start({String? photoUrl, Uint8List? photoBytes}) {
     setState(() {
       _photoUrl = photoUrl;
+      _photoBytes = photoBytes;
       _digits = '';
       _excluded = {};
       _note.clear();
-      if (photoUrl != null) _captures++;
     });
     _setStage(_Stage.amount);
+  }
+
+  /// Bấm nút chụp: chớp màn hình ngay, lấy ảnh rồi sang bước gõ số tiền.
+  Future<void> _shoot() async {
+    if (!_canShoot) return;
+    if (_useSamplePhoto) {
+      setState(() => _captures++);
+      _start(photoUrl: 'sample:viewfinder');
+      return;
+    }
+
+    setState(() {
+      _takingPhoto = true;
+      _captures++;
+    });
+    try {
+      final bytes = await _camera.takePhoto();
+      if (mounted) _start(photoBytes: bytes);
+    } on Exception {
+      if (mounted) _showToast('Không chụp được ảnh. Thử lại nhé.');
+    } finally {
+      if (mounted) setState(() => _takingPhoto = false);
+    }
+  }
+
+  Future<void> _toggleFlash() async {
+    final wanted = !_flashOn;
+    if (_cameraStatus == CameraStatus.ready) {
+      final applied = await _camera.setFlash(wanted);
+      if (!mounted) return;
+      if (!applied) {
+        _showToast('Camera này không có đèn flash.');
+        return;
+      }
+    }
+    setState(() => _flashOn = wanted);
+  }
+
+  void _showToast(String message) {
+    setState(() => _toast = message);
+    _toastTimer?.cancel();
+    _toastTimer = Timer(const Duration(milliseconds: 2400), () {
+      if (mounted) setState(() => _toast = null);
+    });
   }
 
   void _cancel() {
@@ -111,19 +223,16 @@ class _CapturePageState extends State<CapturePage> {
       note: _note.text.trim(),
       participantIds: participants,
       photoUrl: _photoUrl,
+      photoBytes: _photoBytes,
     );
 
     final others = participants.where((id) => id != state.meId).length;
     final owedToMe = expense.amount - (expense.splits[state.meId] ?? 0);
-    setState(() {
-      _toast = others == 0
+    _showToast(
+      others == 0
           ? 'Đã gửi'
-          : 'Đã gửi. $others người nợ bạn ${formatVnd(owedToMe)}';
-    });
-    _toastTimer?.cancel();
-    _toastTimer = Timer(const Duration(milliseconds: 2400), () {
-      if (mounted) setState(() => _toast = null);
-    });
+          : 'Đã gửi. $others người nợ bạn ${formatVnd(owedToMe)}',
+    );
     _setStage(_Stage.viewfinder);
   }
 
@@ -145,12 +254,17 @@ class _CapturePageState extends State<CapturePage> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    ExpensePhoto(
-                      photoUrl: _stage == _Stage.viewfinder
-                          ? 'sample:viewfinder'
-                          : _photoUrl,
-                    ),
-                    if (_stage == _Stage.viewfinder) const _FocusBrackets(),
+                    if (_stage != _Stage.viewfinder)
+                      ExpensePhoto(photoUrl: _photoUrl, photoBytes: _photoBytes)
+                    else if (_cameraStatus == CameraStatus.ready)
+                      _camera.preview()
+                    else
+                      const ExpensePhoto(photoUrl: 'sample:viewfinder'),
+                    if (_stage == _Stage.viewfinder) ...[
+                      const _FocusBrackets(),
+                      if (_cameraNotice() case final notice?)
+                        _CameraNotice(notice: notice),
+                    ],
                     if (_stage != _Stage.viewfinder) _amountOnPhoto(context),
                     if (_captures > 0)
                       IgnorePointer(
@@ -191,6 +305,25 @@ class _CapturePageState extends State<CapturePage> {
         ],
       ),
     );
+  }
+
+  /// Lời nhắn hiện trên khung ngắm khi chưa có hình từ camera.
+  ({String title, String body})? _cameraNotice() {
+    return switch (_cameraStatus) {
+      CameraStatus.ready || CameraStatus.starting => null,
+      CameraStatus.denied => (
+        title: 'Tach chưa được dùng camera',
+        body:
+            'Mở Cài đặt của máy, chọn Tach rồi bật Camera. '
+            'Trong lúc đó bạn vẫn ghi được khoản không cần ảnh.',
+      ),
+      CameraStatus.unavailable => (
+        title: 'Máy này không có camera',
+        body: _useSamplePhoto
+            ? 'Bản thử nghiệm: bấm nút chụp để dùng ảnh mẫu.'
+            : 'Bạn vẫn ghi được khoản không cần ảnh.',
+      ),
+    };
   }
 
   Widget _topBar(LedgerState state) {
@@ -407,7 +540,7 @@ class _CapturePageState extends State<CapturePage> {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               IconButton(
-                onPressed: () => setState(() => _flashOn = !_flashOn),
+                onPressed: _toggleFlash,
                 tooltip: _flashOn ? 'Tắt đèn flash' : 'Bật đèn flash',
                 iconSize: 26,
                 icon: Icon(
@@ -415,11 +548,9 @@ class _CapturePageState extends State<CapturePage> {
                   color: Colors.white,
                 ),
               ),
-              _ShutterButton(
-                onPressed: () => _start(photoUrl: 'sample:viewfinder'),
-              ),
+              _ShutterButton(onPressed: _canShoot ? _shoot : null),
               IconButton(
-                onPressed: () => _start(photoUrl: null),
+                onPressed: _start,
                 tooltip: 'Ghi không cần ảnh',
                 iconSize: 26,
                 icon: const Icon(Icons.edit_note, color: Colors.white),
@@ -564,29 +695,76 @@ class _CapturePageState extends State<CapturePage> {
 class _ShutterButton extends StatelessWidget {
   const _ShutterButton({required this.onPressed});
 
-  final VoidCallback onPressed;
+  /// `null` khi chưa chụp được (camera chưa sẵn sàng hoặc chưa được cấp quyền).
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
+      enabled: onPressed != null,
       label: 'Chụp',
       child: GestureDetector(
         onTap: onPressed,
-        child: Container(
-          width: 78,
-          height: 78,
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 4),
-          ),
-          child: const DecoratedBox(
+        child: Opacity(
+          opacity: onPressed == null ? 0.35 : 1,
+          child: Container(
+            width: 78,
+            height: 78,
+            padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: Colors.white,
               shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 4),
+            ),
+            child: const DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lời nhắn giữa khung ngắm khi camera chưa dùng được.
+class _CameraNotice extends StatelessWidget {
+  const _CameraNotice({required this.notice});
+
+  final ({String title, String body}) notice;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 36),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.no_photography_outlined,
+              size: 36,
+              color: Colors.white.withValues(alpha: 0.85),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              notice.title,
+              textAlign: TextAlign.center,
+              style: text.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              notice.body,
+              textAlign: TextAlign.center,
+              style: text.bodyMedium?.copyWith(
+                color: Colors.white.withValues(alpha: 0.8),
+              ),
+            ),
+          ],
         ),
       ),
     );

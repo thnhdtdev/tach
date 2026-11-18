@@ -209,6 +209,7 @@ class LedgerCubit extends Cubit<LedgerState> {
     required String note,
     required List<String> participantIds,
     String? photoUrl,
+    Uint8List? photoBytes,
   }) {
     final expense = Expense(
       id: _newId('e'),
@@ -216,6 +217,7 @@ class LedgerCubit extends Cubit<LedgerState> {
       amount: amount,
       note: note,
       photoUrl: photoUrl,
+      photoBytes: photoBytes,
       splits: splitEqually(
         amount: amount,
         participantIds: participantIds,

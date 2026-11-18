@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 class Comment {
   const Comment({
     required this.id,
@@ -25,6 +27,7 @@ class Expense {
     required this.splits,
     required this.createdAt,
     this.photoUrl,
+    this.photoBytes,
     this.reactions = const {},
     this.comments = const [],
   });
@@ -36,8 +39,15 @@ class Expense {
   final int amount;
   final String note;
 
-  /// `null` với khoản ghi không cần ảnh (tiền phòng, wifi...).
+  /// Đường dẫn ảnh. `null` khi khoản không có ảnh, hoặc ảnh vừa chụp còn
+  /// nằm trong [photoBytes].
   final String? photoUrl;
+
+  /// Ảnh vừa chụp, giữ trong bộ nhớ cho tới khi có nơi tải lên máy chủ.
+  final Uint8List? photoBytes;
+
+  /// `false` với khoản ghi không cần ảnh (tiền phòng, wifi...).
+  bool get hasPhoto => photoUrl != null || photoBytes != null;
 
   /// Phần mỗi người phải chịu, theo id thành viên. Tổng bằng [amount].
   final Map<String, int> splits;
@@ -54,6 +64,7 @@ class Expense {
       amount: amount,
       note: note,
       photoUrl: photoUrl,
+      photoBytes: photoBytes,
       splits: splits,
       createdAt: createdAt,
       reactions: reactions ?? this.reactions,

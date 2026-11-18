@@ -23,6 +23,9 @@ abstract final class TachColors {
   /// Chữ đặt trên nút xanh bạc hà (chữ trắng không đủ tương phản).
   static const onMint = Color(0xFF04231F);
 
+  /// Hành động khó hoàn tác, ví dụ rời nhóm.
+  static const danger = Color(0xFFB3261E);
+
   static const ink = Color(0xFF14201E);
   static const inkSoft = Color(0xFF5B6B68);
   static const line = Color(0xFFE4EAE8);

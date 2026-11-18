@@ -1,22 +1,35 @@
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../ledger/ledger_cubit.dart';
 
-/// Bảng đổi tên hiển thị.
-class RenameSheet extends StatefulWidget {
-  const RenameSheet({super.key, required this.currentName});
+/// Bảng sửa một cái tên (tên người dùng, tên nhóm).
+class NameEditSheet extends StatefulWidget {
+  const NameEditSheet({
+    super.key,
+    required this.title,
+    required this.description,
+    required this.initialName,
+    required this.hint,
+    required this.maxLength,
+    required this.onSave,
+  });
 
-  final String currentName;
+  final String title;
+  final String description;
+  final String initialName;
+  final String hint;
+  final int maxLength;
+
+  /// Nhận tên mới khi người dùng bấm lưu. Tên trống không được lưu.
+  final ValueChanged<String> onSave;
 
   @override
-  State<RenameSheet> createState() => _RenameSheetState();
+  State<NameEditSheet> createState() => _NameEditSheetState();
 }
 
-class _RenameSheetState extends State<RenameSheet> {
-  late final _name = TextEditingController(text: widget.currentName);
+class _NameEditSheetState extends State<NameEditSheet> {
+  late final _name = TextEditingController(text: widget.initialName);
 
   @override
   void dispose() {
@@ -25,7 +38,7 @@ class _RenameSheetState extends State<RenameSheet> {
   }
 
   void _save() {
-    context.read<LedgerCubit>().renameMe(_name.text);
+    widget.onSave(_name.text);
     Navigator.of(context).pop();
   }
 
@@ -45,21 +58,20 @@ class _RenameSheetState extends State<RenameSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Đổi tên', style: text.titleLarge),
+          Text(widget.title, style: text.titleLarge),
           const SizedBox(height: 6),
-          Text(
-            'Cả nhóm sẽ thấy tên này ở mỗi khoản chi của bạn.',
-            style: text.bodyMedium,
-          ),
+          Text(widget.description, style: text.bodyMedium),
           const SizedBox(height: 16),
           TextField(
             controller: _name,
             autofocus: true,
             textCapitalization: TextCapitalization.words,
-            inputFormatters: [LengthLimitingTextInputFormatter(24)],
+            inputFormatters: [
+              LengthLimitingTextInputFormatter(widget.maxLength),
+            ],
             style: text.titleMedium,
             decoration: InputDecoration(
-              hintText: 'Tên của bạn',
+              hintText: widget.hint,
               filled: true,
               fillColor: TachColors.mintWash.withValues(alpha: 0.5),
               border: OutlineInputBorder(

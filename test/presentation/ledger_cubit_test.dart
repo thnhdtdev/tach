@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tach/src/datasource/sample/sample_group_repository.dart';
 import 'package:tach/src/domain/entities/group.dart';
 import 'package:tach/src/domain/entities/settlement.dart';
+import 'package:tach/src/domain/repositories/group_repository.dart';
 import 'package:tach/src/presentation/ledger/ledger_cubit.dart';
 
 void main() {
@@ -180,6 +181,51 @@ void main() {
     });
   });
 
+  group('đổi tên và rời nhóm', () {
+    test('đổi tên nhóm giữ nguyên mã chuyển khoản, bỏ qua tên trống', () {
+      cubit.renameGroup('  Nhà trọ Cầu Giấy ');
+      expect(cubit.state.group.name, 'Nhà trọ Cầu Giấy');
+      expect(cubit.state.group.code, 'TRO12');
+
+      cubit.renameGroup('   ');
+      expect(cubit.state.group.name, 'Nhà trọ Cầu Giấy');
+    });
+
+    test('còn nợ thì không rời nhóm được', () {
+      expect(cubit.state.canLeaveGroup, isFalse);
+      expect(cubit.leaveGroup(), isFalse);
+      expect(cubit.state.group.name, 'Trọ 12');
+      expect(cubit.state.groups, hasLength(1));
+    });
+
+    test('rời nhóm đã sòng phẳng thì mở nhóm còn lại', () {
+      cubit.createGroup(name: 'Đà Lạt', type: GroupType.trip);
+      expect(cubit.state.canLeaveGroup, isTrue);
+
+      expect(cubit.leaveGroup(), isTrue);
+      expect(cubit.state.groups.map((g) => g.name), ['Trọ 12']);
+      expect(cubit.state.group.name, 'Trọ 12');
+      expect(cubit.state.expenses, hasLength(8));
+    });
+
+    test('rời nhóm cuối cùng: không còn nhóm nhưng hồ sơ vẫn còn', () async {
+      final solo = LedgerCubit(_SoloGroupRepository());
+      addTearDown(solo.close);
+      await solo.load();
+
+      expect(solo.leaveGroup(), isTrue);
+      expect(solo.state.hasGroup, isFalse);
+      expect(solo.state.expenses, isEmpty);
+      expect(solo.state.myNet, 0);
+      expect(solo.state.me.name, 'An');
+
+      solo.renameMe('Ánh');
+      final group = solo.createGroup(name: 'Nhà mình', type: GroupType.family);
+      expect(solo.state.group.id, group.id);
+      expect(group.members.single.name, 'Ánh');
+    });
+  });
+
   test('báo đã chuyển thì chờ xác nhận; xác nhận xong mới hết nợ', () {
     final transfer = cubit.state.transfers.singleWhere(
       (t) => t.fromId == cubit.state.meId,
@@ -202,4 +248,24 @@ void main() {
     cubit.confirmReceived(pending.id);
     expect(cubit.state.myNet, 0);
   });
+}
+
+/// Người dùng chỉ ở một nhóm chưa có khoản chi nào.
+class _SoloGroupRepository implements GroupRepository {
+  @override
+  Future<GroupSnapshot> loadCurrentGroup() async {
+    return const GroupSnapshot(
+      group: Group(
+        id: 'g-solo',
+        name: 'Một mình',
+        code: 'MOTMINH',
+        type: GroupType.room,
+        inviteCode: 'ABCDEF',
+        members: [Member(id: 'u-an', name: 'An')],
+      ),
+      currentUserId: 'u-an',
+      expenses: [],
+      settlements: [],
+    );
+  }
 }

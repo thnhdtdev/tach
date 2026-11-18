@@ -79,6 +79,37 @@ final tachLightTheme = ThemeData(
     ),
   ),
   dividerTheme: const DividerThemeData(color: TachColors.line, thickness: 1),
+  // Chữ nút dạng văn bản dùng xanh đậm: xanh bạc hà trên nền trắng khó đọc.
+  textButtonTheme: TextButtonThemeData(
+    style: TextButton.styleFrom(
+      foregroundColor: TachColors.mintDeep,
+      textStyle: const TextStyle(
+        fontFamily: _family,
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  ),
+  dialogTheme: const DialogThemeData(
+    backgroundColor: TachColors.paper,
+    surfaceTintColor: Colors.transparent,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(24)),
+    ),
+    titleTextStyle: TextStyle(
+      fontFamily: _family,
+      fontSize: 20,
+      fontWeight: FontWeight.w600,
+      height: 1.3,
+      color: TachColors.ink,
+    ),
+    contentTextStyle: TextStyle(
+      fontFamily: _family,
+      fontSize: 16,
+      height: 1.45,
+      color: TachColors.inkSoft,
+    ),
+  ),
 );
 
 /// Theme tối cho camera và bảng tin, nơi ảnh là nội dung chính.

@@ -72,9 +72,10 @@ class Group {
   final String inviteCode;
   final List<Member> members;
 
-  Group copyWith({List<Member>? members}) => Group(
+  /// Đổi tên không đổi [code], để nội dung chuyển khoản của nhóm giữ nguyên.
+  Group copyWith({String? name, List<Member>? members}) => Group(
     id: id,
-    name: name,
+    name: name ?? this.name,
     code: code,
     type: type,
     inviteCode: inviteCode,

@@ -2,16 +2,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/format/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../dependency/injection.dart';
 import '../../services/avatar/avatar_picker.dart';
+import '../balance/balance_screen.dart';
 import '../group/group_invite_screen.dart';
 import '../ledger/ledger_cubit.dart';
 import '../widgets/info_line.dart';
 import '../widgets/member_avatar.dart';
 import '../widgets/section_title.dart';
 import 'bank_account_sheet.dart';
-import 'rename_sheet.dart';
+import 'name_edit_sheet.dart';
 
 /// Hồ sơ của người dùng: tên, tài khoản nhận tiền, nhóm đang ở và đăng xuất.
 class ProfileScreen extends StatelessWidget {
@@ -66,11 +68,80 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
+  /// Rời nhóm đang mở. Còn khoản chưa sòng phẳng thì chỉ báo lý do.
+  Future<void> _leaveGroup(BuildContext context) async {
+    final cubit = context.read<LedgerCubit>();
+    final state = cubit.state;
+    final groupName = state.group.name;
+
+    if (!state.canLeaveGroup) {
+      final amount = formatVnd(state.myNet.abs());
+      final seeBalance = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Chưa rời nhóm được'),
+          content: Text(
+            state.myNet < 0
+                ? 'Bạn còn cần trả $amount trong $groupName. '
+                      'Trả xong rồi bạn mới rời nhóm được.'
+                : 'Mọi người còn cần trả bạn $amount trong $groupName. '
+                      'Nhận đủ rồi bạn mới rời nhóm được.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Đóng'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Xem số dư'),
+            ),
+          ],
+        ),
+      );
+      if (seeBalance == true && context.mounted) {
+        await Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: (_) => const BalanceScreen()));
+      }
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Rời nhóm $groupName?'),
+        content: const Text(
+          'Bạn sẽ không còn thấy khoản chi và ảnh của nhóm này. '
+          'Muốn vào lại cần mã mời.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Ở lại'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: TachColors.danger),
+            child: const Text('Rời nhóm'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    if (cubit.leaveGroup()) {
+      // Nhóm đang mở đã đổi; quay về màn chính của nhóm còn lại.
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final state = context.watch<LedgerCubit>().state;
-    final me = state.member(state.meId);
+    final cubit = context.read<LedgerCubit>();
+    final me = state.me;
     final bank = me.bank;
 
     return Scaffold(
@@ -101,15 +172,29 @@ class ProfileScreen extends StatelessWidget {
                       style: text.headlineMedium,
                     ),
                     Text(
-                      'Thành viên ${state.group.name}',
+                      state.hasGroup
+                          ? 'Thành viên ${state.group.name}'
+                          : 'Chưa ở nhóm nào',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: text.bodyMedium,
                     ),
                   ],
                 ),
               ),
               IconButton(
-                onPressed: () =>
-                    _openSheet(context, RenameSheet(currentName: me.name)),
+                onPressed: () => _openSheet(
+                  context,
+                  NameEditSheet(
+                    title: 'Đổi tên',
+                    description:
+                        'Cả nhóm sẽ thấy tên này ở mỗi khoản chi của bạn.',
+                    initialName: me.name,
+                    hint: 'Tên của bạn',
+                    maxLength: 24,
+                    onSave: cubit.renameMe,
+                  ),
+                ),
                 tooltip: 'Đổi tên',
                 icon: const Icon(Icons.edit_outlined),
               ),
@@ -152,48 +237,75 @@ class ProfileScreen extends StatelessWidget {
               child: const Text('Sửa tài khoản'),
             ),
           ],
-          const SectionTitle('Nhóm của bạn'),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
+          if (state.hasGroup) ...[
+            const SectionTitle('Nhóm đang mở'),
+            Row(
               children: [
                 Expanded(
-                  child: Text(state.group.name, style: text.titleMedium),
+                  child: Text(
+                    state.group.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.titleMedium,
+                  ),
                 ),
                 Text(
                   '${state.group.members.length} người',
                   style: text.bodyMedium,
                 ),
+                IconButton(
+                  onPressed: () => _openSheet(
+                    context,
+                    NameEditSheet(
+                      title: 'Đổi tên nhóm',
+                      description: 'Cả nhóm sẽ thấy tên mới.',
+                      initialName: state.group.name,
+                      hint: 'Tên nhóm',
+                      maxLength: 30,
+                      onSave: cubit.renameGroup,
+                    ),
+                  ),
+                  tooltip: 'Đổi tên nhóm',
+                  icon: const Icon(Icons.edit_outlined),
+                ),
               ],
             ),
-          ),
-          for (final m in state.group.members)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 7),
-              child: Row(
-                children: [
-                  MemberAvatar(
-                    name: m.name,
-                    tone: state.toneOf(m.id),
-                    photo: m.avatarBytes,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text(m.name, style: text.bodyLarge)),
-                  if (m.id == state.meId) Text('Bạn', style: text.bodySmall),
-                ],
+            for (final m in state.group.members)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                child: Row(
+                  children: [
+                    MemberAvatar(
+                      name: m.name,
+                      tone: state.toneOf(m.id),
+                      photo: m.avatarBytes,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(m.name, style: text.bodyLarge)),
+                    if (m.id == state.meId) Text('Bạn', style: text.bodySmall),
+                  ],
+                ),
               ),
-            ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => GroupInviteScreen(groupId: state.group.id),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => GroupInviteScreen(groupId: state.group.id),
+                ),
               ),
+              icon: const Icon(Icons.person_add_alt, size: 20),
+              label: const Text('Mời bạn vào nhóm'),
             ),
-            icon: const Icon(Icons.person_add_alt, size: 20),
-            label: const Text('Mời bạn vào nhóm'),
-          ),
+            const SizedBox(height: 4),
+            TextButton(
+              onPressed: () => _leaveGroup(context),
+              style: TextButton.styleFrom(
+                foregroundColor: TachColors.danger,
+                minimumSize: const Size(64, 48),
+              ),
+              child: const Text('Rời nhóm'),
+            ),
+          ],
           const SizedBox(height: 36),
           OutlinedButton(onPressed: onSignOut, child: const Text('Đăng xuất')),
         ],

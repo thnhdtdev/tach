@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tach/src/app.dart';
 import 'package:tach/src/dependency/injection.dart';
+import 'package:tach/src/domain/entities/group.dart';
 import 'package:tach/src/services/avatar/avatar_picker.dart';
 import 'package:tach/src/presentation/home/home_screen.dart';
 import 'package:tach/src/presentation/ledger/ledger_cubit.dart';
@@ -404,5 +405,122 @@ void main() {
 
     expect(find.text('Mời bạn vào Trọ 12'), findsOneWidget);
     expect(find.text('K7M2QP'), findsOneWidget);
+  });
+
+  testWidgets('hồ sơ: đổi tên nhóm, tên mới hiện ở màn camera', (tester) async {
+    await _launch(tester);
+    await _signIn(tester);
+
+    await tester.tap(find.byTooltip('Hồ sơ'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byTooltip('Đổi tên nhóm'), 200);
+    await tester.tap(find.byTooltip('Đổi tên nhóm'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Nhà trọ Cầu Giấy');
+    await tester.pump();
+    await tester.tap(find.text('Lưu tên'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nhà trọ Cầu Giấy'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Nhà trọ Cầu Giấy'), findsOneWidget);
+    expect(find.text('Trọ 12'), findsNothing);
+  });
+
+  testWidgets('rời nhóm khi còn nợ: báo lý do và dẫn sang số dư', (
+    tester,
+  ) async {
+    await _launch(tester);
+    await _signIn(tester);
+    final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+
+    await tester.tap(find.byTooltip('Hồ sơ'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Rời nhóm'), 200);
+    await tester.tap(find.text('Rời nhóm'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Chưa rời nhóm được'), findsOneWidget);
+    expect(
+      find.textContaining('Bạn còn cần trả 266.000đ trong Trọ 12'),
+      findsOneWidget,
+    );
+    expect(cubit.state.groups, hasLength(1));
+
+    await tester.tap(find.text('Xem số dư'));
+    await tester.pumpAndSettle();
+    expect(find.text('Số dư'), findsOneWidget);
+    expect(find.text('Trả cho ai'), findsOneWidget);
+  });
+
+  testWidgets('rời nhóm đã sòng phẳng: xác nhận rồi về nhóm còn lại', (
+    tester,
+  ) async {
+    await _launch(tester);
+    await _signIn(tester);
+    final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+    cubit.createGroup(name: 'Đà Lạt', type: GroupType.trip);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Hồ sơ'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Rời nhóm'), 200);
+    await tester.tap(find.text('Rời nhóm'));
+    await tester.pumpAndSettle();
+    expect(find.text('Rời nhóm Đà Lạt?'), findsOneWidget);
+
+    await tester.tap(find.text('Ở lại'));
+    await tester.pumpAndSettle();
+    expect(cubit.state.group.name, 'Đà Lạt');
+
+    await tester.tap(find.text('Rời nhóm'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Rời nhóm').last);
+    await tester.pumpAndSettle();
+
+    expect(cubit.state.groups.map((g) => g.name), ['Trọ 12']);
+    expect(find.text('Hồ sơ'), findsNothing);
+    expect(find.text('Trọ 12'), findsOneWidget);
+    expect(find.textContaining('vừa ghi'), findsOneWidget);
+  });
+
+  testWidgets('rời nhóm cuối cùng: màn mời tạo nhóm, tạo xong vào camera', (
+    tester,
+  ) async {
+    await _launch(tester);
+    await _signIn(tester);
+    final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+
+    // Trả hết nợ trong nhóm mẫu để rời được nhóm duy nhất.
+    final mine = cubit.state.transfers.singleWhere(
+      (t) => t.fromId == cubit.state.meId,
+    );
+    cubit.markTransferred(mine);
+    cubit.confirmReceived(cubit.state.pendingFor(mine)!.id);
+    expect(cubit.leaveGroup(), isTrue);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bạn chưa ở nhóm nào'), findsOneWidget);
+    expect(find.bySemanticsLabel('Chụp'), findsNothing);
+
+    await tester.tap(find.byTooltip('Hồ sơ'));
+    await tester.pumpAndSettle();
+    expect(find.text('Chưa ở nhóm nào'), findsOneWidget);
+    expect(find.text('Rời nhóm'), findsNothing);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Tạo nhóm'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Nhà mình');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Tạo nhóm'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Xong'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nhà mình'), findsOneWidget);
+    expect(find.bySemanticsLabel('Chụp'), findsOneWidget);
   });
 }

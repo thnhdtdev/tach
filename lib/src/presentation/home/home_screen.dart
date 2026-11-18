@@ -12,6 +12,8 @@ import '../group/groups_sheet.dart';
 import '../ledger/ledger_cubit.dart';
 import '../month/month_grid_screen.dart';
 import '../profile/profile_screen.dart';
+import '../widgets/member_avatar.dart';
+import '../widgets/tach_mark.dart';
 
 /// Màn chính: camera ở trên cùng, vuốt lên là bảng tin, mỗi màn một khoản chi.
 class HomeScreen extends StatefulWidget {
@@ -113,6 +115,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ? const Center(
                   child: CircularProgressIndicator(color: TachColors.mintLight),
                 )
+              : !state.hasGroup
+              ? _NoGroupView(
+                  state: state,
+                  onOpenProfile: _openProfile,
+                  onCreateGroup: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const CreateGroupScreen(),
+                    ),
+                  ),
+                )
               : Stack(
                   children: [
                     PageView.builder(
@@ -159,6 +171,80 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Màn chính khi người dùng chưa ở nhóm nào: mời tạo nhóm đầu tiên.
+class _NoGroupView extends StatelessWidget {
+  const _NoGroupView({
+    required this.state,
+    required this.onOpenProfile,
+    required this.onCreateGroup,
+  });
+
+  final LedgerState state;
+  final VoidCallback onOpenProfile;
+  final VoidCallback onCreateGroup;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 6, 16, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: Tooltip(
+                message: 'Hồ sơ',
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: onOpenProfile,
+                  child: SizedBox.square(
+                    dimension: 44,
+                    child: Center(
+                      child: MemberAvatar(
+                        name: state.me.name,
+                        tone: state.toneOf(state.meId),
+                        photo: state.me.avatarBytes,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const Spacer(flex: 2),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: TachMark(size: 64, color: TachColors.mintLight),
+            ),
+            const SizedBox(height: 22),
+            Text('Bạn chưa ở nhóm nào', style: text.headlineMedium),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Text(
+                'Tạo một nhóm cho phòng trọ, chuyến đi hoặc gia đình để '
+                'bắt đầu ghi chi tiêu chung.',
+                style: text.bodyLarge?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.72),
+                ),
+              ),
+            ),
+            const Spacer(flex: 3),
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: FilledButton(
+                onPressed: onCreateGroup,
+                child: const Text('Tạo nhóm'),
+              ),
+            ),
+          ],
         ),
       ),
     );

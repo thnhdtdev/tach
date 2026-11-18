@@ -42,19 +42,23 @@ const _noGroup = GroupLedger(
 class LedgerState {
   const LedgerState({
     required this.isLoading,
-    required this.meId,
+    required this.me,
     required this.ledgers,
     required this.currentGroupId,
   });
 
   const LedgerState.loading()
     : isLoading = true,
-      meId = '',
+      me = const Member(id: '', name: ''),
       ledgers = const [],
       currentGroupId = '';
 
   final bool isLoading;
-  final String meId;
+
+  /// Hồ sơ của người dùng. Tồn tại cả khi họ chưa ở nhóm nào.
+  final Member me;
+
+  String get meId => me.id;
 
   /// Mọi nhóm người dùng đang tham gia, theo thứ tự vào nhóm.
   final List<GroupLedger> ledgers;
@@ -67,6 +71,9 @@ class LedgerState {
 
   List<Group> get groups => [for (final l in ledgers) l.group];
 
+  /// `false` khi người dùng chưa ở nhóm nào (mới đăng ký hoặc đã rời hết).
+  bool get hasGroup => ledgers.isNotEmpty;
+
   /// Nhóm đang mở.
   Group get group => _current.group;
 
@@ -74,14 +81,16 @@ class LedgerState {
   List<Expense> get expenses => _current.expenses;
   List<Settlement> get settlements => _current.settlements;
 
-  Member member(String id) => group.members.firstWhere((m) => m.id == id);
+  Member member(String id) =>
+      id == meId ? me : group.members.firstWhere((m) => m.id == id);
 
   /// Tên hiển thị: chính mình thì gọi là "Bạn".
   String displayName(String id) => id == meId ? 'Bạn' : member(id).name;
 
   Color toneOf(String id) {
     final index = group.members.indexWhere((m) => m.id == id);
-    return TachColors.avatarTones[index % TachColors.avatarTones.length];
+    final slot = index < 0 ? 0 : index % TachColors.avatarTones.length;
+    return TachColors.avatarTones[slot];
   }
 
   Map<String, int> get net => netBalances(
@@ -94,6 +103,9 @@ class LedgerState {
   List<Transfer> get transfers => simplifyDebts(net);
 
   int get myNet => net[meId] ?? 0;
+
+  /// Chỉ rời được nhóm khi không còn nợ ai và không ai còn nợ mình.
+  bool get canLeaveGroup => hasGroup && myNet == 0;
 
   int get totalSpent => expenses.fold(0, (sum, e) => sum + e.amount);
 
@@ -129,10 +141,14 @@ class LedgerState {
     ]);
   }
 
-  LedgerState withLedgers(List<GroupLedger> ledgers, {String? currentGroupId}) {
+  LedgerState withLedgers(
+    List<GroupLedger> ledgers, {
+    String? currentGroupId,
+    Member? me,
+  }) {
     return LedgerState(
       isLoading: isLoading,
-      meId: meId,
+      me: me ?? this.me,
       ledgers: ledgers,
       currentGroupId: currentGroupId ?? this.currentGroupId,
     );
@@ -163,7 +179,9 @@ class LedgerCubit extends Cubit<LedgerState> {
     emit(
       LedgerState(
         isLoading: false,
-        meId: snapshot.currentUserId,
+        me: snapshot.group.members.firstWhere(
+          (m) => m.id == snapshot.currentUserId,
+        ),
         currentGroupId: snapshot.group.id,
         ledgers: [
           GroupLedger(
@@ -259,8 +277,33 @@ class LedgerCubit extends Cubit<LedgerState> {
             expenses: l.expenses,
             settlements: l.settlements,
           ),
-      ]),
+      ], me: change(state.me)),
     );
+  }
+
+  /// Đổi tên nhóm đang mở. Bỏ qua tên trống.
+  void renameGroup(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || !state.hasGroup) return;
+    emit(state.copyWith(group: state.group.copyWith(name: trimmed)));
+  }
+
+  /// Rời nhóm đang mở rồi mở nhóm còn lại đầu tiên (nếu có).
+  ///
+  /// Trả về `false` và không làm gì khi còn khoản chưa sòng phẳng.
+  bool leaveGroup() {
+    if (!state.canLeaveGroup) return false;
+    final remaining = [
+      for (final l in state.ledgers)
+        if (l.group.id != state.currentGroupId) l,
+    ];
+    emit(
+      state.withLedgers(
+        remaining,
+        currentGroupId: remaining.isEmpty ? '' : remaining.first.group.id,
+      ),
+    );
+    return true;
   }
 
   /// Tạo nhóm mới chỉ có người dùng, rồi mở luôn nhóm đó.
@@ -275,7 +318,7 @@ class LedgerCubit extends Cubit<LedgerState> {
         for (var i = 0; i < _inviteLength; i++)
           _inviteAlphabet[_random.nextInt(_inviteAlphabet.length)],
       ].join(),
-      members: [state.member(state.meId)],
+      members: [state.me],
     );
     emit(
       state.withLedgers([

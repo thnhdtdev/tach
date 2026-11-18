@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:tach/main.dart';
+import 'package:tach/src/app.dart';
 
 void main() {
   testWidgets('Splash shows app name and slogan', (WidgetTester tester) async {

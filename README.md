@@ -33,6 +33,22 @@ supabase/   Migration và cấu hình Supabase
 docs/       Tài liệu sản phẩm và thương hiệu
 ```
 
+Bên trong `lib/`:
+
+```
+lib/
+├── main.dart          Điểm khởi chạy
+└── src/
+    ├── app.dart       Widget gốc (MaterialApp)
+    ├── core/          Theme, hằng số, kiểu tiền VND, helper
+    ├── datasource/    Truy cập dữ liệu Supabase (auth, nhóm, khoản chi, ảnh)
+    ├── dependency/    Đăng ký dependency injection
+    ├── domain/        Entity, interface repository, logic chia tiền
+    ├── presentation/  Màn hình theo tính năng và state
+    ├── routes/        Điều hướng
+    └── services/      Widget màn hình chính, VietQR, camera
+```
+
 ## Chạy app
 
 ```bash

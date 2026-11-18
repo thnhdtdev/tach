@@ -121,6 +121,65 @@ void main() {
     expect(cubit.state.member(me).name, 'Ánh');
   });
 
+  group('nhiều nhóm', () {
+    test('tạo nhóm: chỉ có mình, mở luôn nhóm mới, nhóm cũ giữ nguyên', () {
+      final me = cubit.state.meId;
+      final group = cubit.createGroup(
+        name: '  Đà Lạt tháng 12  ',
+        type: GroupType.trip,
+      );
+
+      expect(group.name, 'Đà Lạt tháng 12');
+      expect(group.code, 'DALATTHA');
+      expect(group.type, GroupType.trip);
+      expect(group.inviteCode, matches(RegExp(r'^[A-HJ-KM-NP-Z2-9]{6}$')));
+      expect(group.members.map((m) => m.id), [me]);
+
+      expect(cubit.state.currentGroupId, group.id);
+      expect(cubit.state.expenses, isEmpty);
+      expect(cubit.state.transfers, isEmpty);
+      expect(cubit.state.myNet, 0);
+      expect(cubit.state.groups.map((g) => g.name), [
+        'Trọ 12',
+        'Đà Lạt tháng 12',
+      ]);
+
+      cubit.switchGroup('g-tro12');
+      expect(cubit.state.group.name, 'Trọ 12');
+      expect(cubit.state.expenses, hasLength(8));
+      expect(cubit.state.myNet, -266000);
+    });
+
+    test('khoản ghi ở nhóm mới không lẫn sang nhóm cũ', () {
+      final me = cubit.state.meId;
+      final trip = cubit.createGroup(name: 'Đà Lạt', type: GroupType.trip);
+      cubit.addExpense(amount: 50000, note: 'Xăng', participantIds: [me]);
+      expect(cubit.state.expenses, hasLength(1));
+
+      cubit.switchGroup('g-tro12');
+      expect(cubit.state.expenses, hasLength(8));
+      expect(cubit.state.expenses.any((e) => e.note == 'Xăng'), isFalse);
+
+      cubit.switchGroup(trip.id);
+      expect(cubit.state.expenses.single.note, 'Xăng');
+    });
+
+    test('đổi tên áp dụng cho hồ sơ ở mọi nhóm', () {
+      final me = cubit.state.meId;
+      cubit.createGroup(name: 'Nhà mình', type: GroupType.family);
+      cubit.renameMe('Ánh');
+
+      for (final group in cubit.state.groups) {
+        expect(group.members.firstWhere((m) => m.id == me).name, 'Ánh');
+      }
+    });
+
+    test('mở nhóm không tồn tại thì giữ nguyên nhóm đang mở', () {
+      cubit.switchGroup('khong-co');
+      expect(cubit.state.group.name, 'Trọ 12');
+    });
+  });
+
   test('báo đã chuyển thì chờ xác nhận; xác nhận xong mới hết nợ', () {
     final transfer = cubit.state.transfers.singleWhere(
       (t) => t.fromId == cubit.state.meId,

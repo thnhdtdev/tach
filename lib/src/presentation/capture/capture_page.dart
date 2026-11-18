@@ -22,12 +22,14 @@ class CapturePage extends StatefulWidget {
     required this.onBusyChanged,
     required this.onOpenFeed,
     required this.onOpenProfile,
+    required this.onOpenGroups,
   });
 
   /// Báo `true` khi đang ghi dở một khoản, để màn ngoài khóa thao tác vuốt.
   final ValueChanged<bool> onBusyChanged;
   final VoidCallback onOpenFeed;
   final VoidCallback onOpenProfile;
+  final VoidCallback onOpenGroups;
 
   @override
   State<CapturePage> createState() => _CapturePageState();
@@ -202,25 +204,41 @@ class _CapturePageState extends State<CapturePage> {
               const SizedBox(width: 44),
               Expanded(
                 child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
+                  child: Tooltip(
+                    message: 'Đổi nhóm',
+                    child: Material(
                       color: TachColors.nightRaised,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(state.group.name, style: text.labelLarge),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${state.group.members.length} người',
-                          style: text.bodySmall,
+                      borderRadius: BorderRadius.circular(22),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(22),
+                        onTap: widget.onOpenGroups,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 11, 10, 11),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  state.group.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: text.labelLarge,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${state.group.members.length} người',
+                                style: text.bodySmall,
+                              ),
+                              Icon(
+                                Icons.keyboard_arrow_down,
+                                size: 20,
+                                color: Colors.white.withValues(alpha: 0.62),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),

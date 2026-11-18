@@ -48,11 +48,16 @@ class Member {
       Member(id: id, name: name, bank: bank, avatarBytes: bytes);
 }
 
+/// Nhóm dùng để làm gì. Quyết định gợi ý tên và cách gọi trong giao diện.
+enum GroupType { room, trip, family }
+
 class Group {
   const Group({
     required this.id,
     required this.name,
     required this.code,
+    required this.type,
+    required this.inviteCode,
     required this.members,
   });
 
@@ -61,8 +66,18 @@ class Group {
 
   /// Mã ngắn không dấu, dùng trong nội dung chuyển khoản (ví dụ `TRO12`).
   final String code;
+  final GroupType type;
+
+  /// Mã gửi cho người khác để họ vào nhóm.
+  final String inviteCode;
   final List<Member> members;
 
-  Group copyWith({List<Member>? members}) =>
-      Group(id: id, name: name, code: code, members: members ?? this.members);
+  Group copyWith({List<Member>? members}) => Group(
+    id: id,
+    name: name,
+    code: code,
+    type: type,
+    inviteCode: inviteCode,
+    members: members ?? this.members,
+  );
 }

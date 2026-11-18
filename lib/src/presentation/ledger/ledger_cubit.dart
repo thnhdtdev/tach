@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,29 +13,66 @@ import '../../domain/logic/balances.dart';
 import '../../domain/logic/split.dart';
 import '../../domain/repositories/group_repository.dart';
 
-class LedgerState {
-  const LedgerState({
-    required this.isLoading,
+/// Một nhóm cùng sổ chi tiêu của nó.
+class GroupLedger {
+  const GroupLedger({
     required this.group,
-    required this.meId,
-    required this.expenses,
-    required this.settlements,
+    this.expenses = const [],
+    this.settlements = const [],
   });
 
-  const LedgerState.loading()
-    : isLoading = true,
-      group = const Group(id: '', name: '', code: '', members: []),
-      meId = '',
-      expenses = const [],
-      settlements = const [];
-
-  final bool isLoading;
   final Group group;
-  final String meId;
 
   /// Khoản chi của nhóm, mới nhất đứng đầu.
   final List<Expense> expenses;
   final List<Settlement> settlements;
+}
+
+const _noGroup = GroupLedger(
+  group: Group(
+    id: '',
+    name: '',
+    code: '',
+    type: GroupType.room,
+    inviteCode: '',
+    members: [],
+  ),
+);
+
+class LedgerState {
+  const LedgerState({
+    required this.isLoading,
+    required this.meId,
+    required this.ledgers,
+    required this.currentGroupId,
+  });
+
+  const LedgerState.loading()
+    : isLoading = true,
+      meId = '',
+      ledgers = const [],
+      currentGroupId = '';
+
+  final bool isLoading;
+  final String meId;
+
+  /// Mọi nhóm người dùng đang tham gia, theo thứ tự vào nhóm.
+  final List<GroupLedger> ledgers;
+  final String currentGroupId;
+
+  GroupLedger get _current => ledgers.firstWhere(
+    (l) => l.group.id == currentGroupId,
+    orElse: () => _noGroup,
+  );
+
+  List<Group> get groups => [for (final l in ledgers) l.group];
+
+  /// Nhóm đang mở.
+  Group get group => _current.group;
+
+  /// Khoản chi của nhóm đang mở, mới nhất đứng đầu.
+  List<Expense> get expenses => _current.expenses;
+  List<Settlement> get settlements => _current.settlements;
 
   Member member(String id) => group.members.firstWhere((m) => m.id == id);
 
@@ -71,28 +109,50 @@ class LedgerState {
     return null;
   }
 
+  /// Bản sao với thay đổi áp vào nhóm đang mở.
   LedgerState copyWith({
     Group? group,
     List<Expense>? expenses,
     List<Settlement>? settlements,
   }) {
+    final current = _current;
+    return withLedgers([
+      for (final l in ledgers)
+        if (l.group.id == currentGroupId)
+          GroupLedger(
+            group: group ?? current.group,
+            expenses: expenses ?? current.expenses,
+            settlements: settlements ?? current.settlements,
+          )
+        else
+          l,
+    ]);
+  }
+
+  LedgerState withLedgers(List<GroupLedger> ledgers, {String? currentGroupId}) {
     return LedgerState(
       isLoading: isLoading,
-      group: group ?? this.group,
       meId: meId,
-      expenses: expenses ?? this.expenses,
-      settlements: settlements ?? this.settlements,
+      ledgers: ledgers,
+      currentGroupId: currentGroupId ?? this.currentGroupId,
     );
   }
 }
 
-/// Trạng thái sổ chi tiêu của nhóm đang mở.
+/// Trạng thái các nhóm của người dùng và sổ chi tiêu của nhóm đang mở.
 ///
 /// Thay đổi hiện chỉ giữ trong bộ nhớ; khi có Supabase sẽ ghi qua repository.
 class LedgerCubit extends Cubit<LedgerState> {
-  LedgerCubit(this._repository) : super(const LedgerState.loading());
+  LedgerCubit(this._repository, {Random? random})
+    : _random = random ?? Random(),
+      super(const LedgerState.loading());
+
+  /// Bộ ký tự mã mời, bỏ các ký tự dễ đọc nhầm (0/O, 1/I/L).
+  static const _inviteAlphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  static const _inviteLength = 6;
 
   final GroupRepository _repository;
+  final Random _random;
   var _localId = 0;
 
   String _newId(String prefix) => '$prefix-local-${_localId++}';
@@ -103,11 +163,16 @@ class LedgerCubit extends Cubit<LedgerState> {
     emit(
       LedgerState(
         isLoading: false,
-        group: snapshot.group,
         meId: snapshot.currentUserId,
-        expenses: [...snapshot.expenses]
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
-        settlements: snapshot.settlements,
+        currentGroupId: snapshot.group.id,
+        ledgers: [
+          GroupLedger(
+            group: snapshot.group,
+            expenses: [...snapshot.expenses]
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+            settlements: snapshot.settlements,
+          ),
+        ],
       ),
     );
   }
@@ -179,17 +244,53 @@ class LedgerCubit extends Cubit<LedgerState> {
     });
   }
 
+  /// Hồ sơ của người dùng đi theo họ ở mọi nhóm, nên sửa ở tất cả các nhóm.
   void _updateMe(Member Function(Member) change) {
     emit(
-      state.copyWith(
-        group: state.group.copyWith(
-          members: [
-            for (final m in state.group.members)
-              if (m.id == state.meId) change(m) else m,
-          ],
-        ),
-      ),
+      state.withLedgers([
+        for (final l in state.ledgers)
+          GroupLedger(
+            group: l.group.copyWith(
+              members: [
+                for (final m in l.group.members)
+                  if (m.id == state.meId) change(m) else m,
+              ],
+            ),
+            expenses: l.expenses,
+            settlements: l.settlements,
+          ),
+      ]),
     );
+  }
+
+  /// Tạo nhóm mới chỉ có người dùng, rồi mở luôn nhóm đó.
+  Group createGroup({required String name, required GroupType type}) {
+    final trimmed = name.trim();
+    final group = Group(
+      id: _newId('g'),
+      name: trimmed,
+      code: groupCodeFromName(trimmed),
+      type: type,
+      inviteCode: [
+        for (var i = 0; i < _inviteLength; i++)
+          _inviteAlphabet[_random.nextInt(_inviteAlphabet.length)],
+      ].join(),
+      members: [state.member(state.meId)],
+    );
+    emit(
+      state.withLedgers([
+        ...state.ledgers,
+        GroupLedger(group: group),
+      ], currentGroupId: group.id),
+    );
+    return group;
+  }
+
+  /// Mở một nhóm khác trong các nhóm đang tham gia.
+  void switchGroup(String groupId) {
+    if (groupId == state.currentGroupId) return;
+    if (!state.ledgers.any((l) => l.group.id == groupId)) return;
+    emit(state.withLedgers(state.ledgers, currentGroupId: groupId));
   }
 
   /// Đổi tên hiển thị của chính người dùng. Bỏ qua tên trống.

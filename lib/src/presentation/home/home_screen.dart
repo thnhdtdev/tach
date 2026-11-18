@@ -7,6 +7,8 @@ import '../../core/theme/app_theme.dart';
 import '../balance/balance_screen.dart';
 import '../capture/capture_page.dart';
 import '../feed/expense_page.dart';
+import '../group/create_group_screen.dart';
+import '../group/groups_sheet.dart';
 import '../ledger/ledger_cubit.dart';
 import '../month/month_grid_screen.dart';
 import '../profile/profile_screen.dart';
@@ -55,6 +57,35 @@ class _HomeScreenState extends State<HomeScreen> {
         .push(MaterialPageRoute<void>(builder: (_) => const BalanceScreen()));
   }
 
+  /// Mở bảng nhóm: chuyển sang nhóm khác hoặc tạo nhóm mới.
+  Future<void> _openGroups() async {
+    final cubit = context.read<LedgerCubit>();
+    final result = await showModalBottomSheet<GroupsSheetResult>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: TachColors.paper,
+      showDragHandle: true,
+      // Màn camera dùng theme tối; bảng nhóm là nền sáng.
+      builder: (_) => Theme(
+        data: tachLightTheme,
+        child: BlocProvider.value(value: cubit, child: const GroupsSheet()),
+      ),
+    );
+    if (!mounted) return;
+    switch (result) {
+      case OpenGroup(:final groupId):
+        cubit.switchGroup(groupId);
+      case CreateNewGroup():
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const CreateGroupScreen()),
+        );
+      case null:
+        return;
+    }
+    // Nhóm đã đổi thì bảng tin cũng đổi; quay về camera của nhóm mới.
+    if (mounted && _pages.hasClients) _pages.jumpToPage(0);
+  }
+
   void _openProfile() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -100,6 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 setState(() => _capturing = busy),
                             onOpenFeed: () => _goToPage(1),
                             onOpenProfile: _openProfile,
+                            onOpenGroups: _openGroups,
                           );
                         }
                         final expense = state.expenses[page - 1];

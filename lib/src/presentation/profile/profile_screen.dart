@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/theme/app_colors.dart';
 import '../../dependency/injection.dart';
 import '../../services/avatar/avatar_picker.dart';
+import '../group/group_invite_screen.dart';
 import '../ledger/ledger_cubit.dart';
 import '../widgets/info_line.dart';
 import '../widgets/member_avatar.dart';
@@ -183,6 +184,16 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => GroupInviteScreen(groupId: state.group.id),
+              ),
+            ),
+            icon: const Icon(Icons.person_add_alt, size: 20),
+            label: const Text('Mời bạn vào nhóm'),
+          ),
           const SizedBox(height: 36),
           OutlinedButton(onPressed: onSignOut, child: const Text('Đăng xuất')),
         ],

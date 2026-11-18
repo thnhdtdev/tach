@@ -38,6 +38,23 @@ void main() {
     );
   });
 
+  test('buildTransferCode cắt mã nhóm và tên dài còn 8 ký tự mỗi phần', () {
+    expect(
+      buildTransferCode(
+        groupCode: 'DALATTHANG12',
+        payerName: 'Nguyễn Thị Thu Hương',
+        month: 12,
+      ),
+      'DALATTHA NGUYENTH T12',
+    );
+  });
+
+  test('groupCodeFromName suy mã không dấu từ tên nhóm', () {
+    expect(groupCodeFromName('Trọ 12'), 'TRO12');
+    expect(groupCodeFromName('Đà Lạt tháng 12'), 'DALATTHA');
+    expect(groupCodeFromName('🏠 ♥'), 'NHOM');
+  });
+
   test('timeAgo', () {
     final now = DateTime(2026, 11, 18, 15);
     String ago(Duration d) => timeAgo(now.subtract(d), now: now);

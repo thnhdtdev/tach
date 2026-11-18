@@ -32,6 +32,23 @@ String removeDiacritics(String text) {
   return buffer.toString();
 }
 
+String _plainUpper(String text) =>
+    removeDiacritics(text).toUpperCase().replaceAll(RegExp('[^A-Z0-9]'), '');
+
+String _short(String text) =>
+    text.length <= _maxPartLength ? text : text.substring(0, _maxPartLength);
+
+/// Mỗi phần (mã nhóm, tên) tối đa 8 ký tự để nội dung chuyển khoản luôn ngắn.
+const _maxPartLength = 8;
+
+/// Mã nhóm không dấu suy ra từ tên nhóm: "Đà Lạt 2026" thành `DALAT202`.
+///
+/// Tên không có chữ hay số nào (ví dụ toàn biểu tượng) thì dùng `NHOM`.
+String groupCodeFromName(String name) {
+  final plain = _short(_plainUpper(name));
+  return plain.isEmpty ? 'NHOM' : plain;
+}
+
 /// Ghép mã nhóm, tên người trả và tháng thành nội dung chuyển khoản.
 ///
 /// Chỉ giữ chữ cái không dấu và chữ số vì nhiều ngân hàng bỏ ký tự khác.
@@ -40,7 +57,7 @@ String buildTransferCode({
   required String payerName,
   required int month,
 }) {
-  String clean(String text) =>
-      removeDiacritics(text).toUpperCase().replaceAll(RegExp('[^A-Z0-9]'), '');
-  return '${clean(groupCode)} ${clean(payerName)} T$month';
+  final group = _short(_plainUpper(groupCode));
+  final payer = _short(_plainUpper(payerName));
+  return '$group $payer T$month';
 }

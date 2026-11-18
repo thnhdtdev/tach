@@ -319,4 +319,90 @@ void main() {
     expect(find.textContaining('Không mở được camera'), findsOneWidget);
     expect(cubit.state.member(cubit.state.meId).avatarBytes, isNull);
   });
+
+  testWidgets('tạo nhóm mới, xem mã mời rồi chuyển lại nhóm cũ', (
+    tester,
+  ) async {
+    await _launch(tester);
+    await _signIn(tester);
+    final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+
+    await tester.tap(find.byTooltip('Đổi nhóm'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nhóm của bạn'), findsOneWidget);
+    expect(find.text('Phòng trọ, 4 người'), findsOneWidget);
+
+    await tester.tap(find.text('Tạo nhóm mới'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Tạo nhóm'))
+          .onPressed,
+      isNull,
+      reason: 'Chưa đặt tên thì chưa tạo được',
+    );
+
+    await tester.tap(find.bySemanticsLabel('Chuyến đi'));
+    await tester.enterText(find.byType(TextField), 'Đà Lạt');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Tạo nhóm'));
+    await tester.pumpAndSettle();
+
+    final trip = cubit.state.group;
+    expect(trip.name, 'Đà Lạt');
+    expect(find.text('Đã tạo nhóm Đà Lạt'), findsOneWidget);
+    expect(find.text(trip.inviteCode), findsOneWidget);
+
+    // Môi trường test không có bộ nhớ tạm thật, nên hứng lời gọi để kiểm tra.
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied = (call.arguments as Map)['text'] as String;
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+
+    await tester.tap(find.text('Chép lời mời'));
+    await tester.pumpAndSettle();
+    expect(find.text('Đã chép lời mời'), findsOneWidget);
+    expect(copied, contains('Đà Lạt'));
+    expect(copied, contains('Mã mời: ${trip.inviteCode}'));
+
+    await tester.tap(find.text('Xong'));
+    await tester.pumpAndSettle();
+    expect(find.text('Đà Lạt'), findsOneWidget);
+    expect(find.text('1 người'), findsOneWidget);
+    expect(find.text('Chưa có khoản chi nào'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Đổi nhóm'));
+    await tester.pumpAndSettle();
+    expect(find.text('Chuyến đi, 1 người'), findsOneWidget);
+    await tester.tap(find.text('Trọ 12'));
+    await tester.pumpAndSettle();
+    expect(cubit.state.group.name, 'Trọ 12');
+    expect(find.textContaining('vừa ghi'), findsOneWidget);
+  });
+
+  testWidgets('hồ sơ: mở màn mời bạn vào nhóm đang mở', (tester) async {
+    await _launch(tester);
+    await _signIn(tester);
+
+    await tester.tap(find.byTooltip('Hồ sơ'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Mời bạn vào nhóm'), 200);
+    await tester.tap(find.text('Mời bạn vào nhóm'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mời bạn vào Trọ 12'), findsOneWidget);
+    expect(find.text('K7M2QP'), findsOneWidget);
+  });
 }

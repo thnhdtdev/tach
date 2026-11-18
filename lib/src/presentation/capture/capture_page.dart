@@ -236,6 +236,7 @@ class _CapturePageState extends State<CapturePage> {
                       child: MemberAvatar(
                         name: state.member(state.meId).name,
                         tone: state.toneOf(state.meId),
+                        photo: state.member(state.meId).avatarBytes,
                       ),
                     ),
                   ),
@@ -504,6 +505,7 @@ class _CapturePageState extends State<CapturePage> {
                   name: state.displayName(m.id),
                   initialOf: m.name,
                   tone: state.toneOf(m.id),
+                  photo: m.avatarBytes,
                   selected: !_excluded.contains(m.id),
                   onTap: () => setState(() {
                     if (!_excluded.remove(m.id)) _excluded.add(m.id);
@@ -578,6 +580,7 @@ class _PersonToggle extends StatelessWidget {
     required this.name,
     required this.initialOf,
     required this.tone,
+    required this.photo,
     required this.selected,
     required this.onTap,
   });
@@ -585,6 +588,7 @@ class _PersonToggle extends StatelessWidget {
   final String name;
   final String initialOf;
   final Color tone;
+  final Uint8List? photo;
   final bool selected;
   final VoidCallback onTap;
 
@@ -608,7 +612,12 @@ class _PersonToggle extends StatelessWidget {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  MemberAvatar(name: initialOf, tone: tone, size: 52),
+                  MemberAvatar(
+                    name: initialOf,
+                    tone: tone,
+                    photo: photo,
+                    size: 52,
+                  ),
                   if (selected)
                     Positioned(
                       right: -3,

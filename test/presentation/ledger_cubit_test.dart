@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tach/src/datasource/sample/sample_group_repository.dart';
 import 'package:tach/src/domain/entities/group.dart';
@@ -101,6 +103,22 @@ void main() {
         if (m.id != me) m.bank?.accountNumber,
     ], othersBefore);
     expect(cubit.state.myNet, -266000);
+  });
+
+  test('đặt và gỡ ảnh đại diện, giữ nguyên tên và tài khoản', () {
+    final me = cubit.state.meId;
+    final bytes = Uint8List.fromList([1, 2, 3]);
+
+    cubit.setMyAvatar(bytes);
+    expect(cubit.state.member(me).avatarBytes, bytes);
+    expect(cubit.state.member(me).bank?.bankName, 'MB Bank');
+
+    cubit.renameMe('Ánh');
+    expect(cubit.state.member(me).avatarBytes, bytes);
+
+    cubit.setMyAvatar(null);
+    expect(cubit.state.member(me).avatarBytes, isNull);
+    expect(cubit.state.member(me).name, 'Ánh');
   });
 
   test('báo đã chuyển thì chờ xác nhận; xác nhận xong mới hết nợ', () {

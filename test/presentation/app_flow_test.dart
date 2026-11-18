@@ -1,11 +1,34 @@
+import 'dart:convert';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tach/src/app.dart';
 import 'package:tach/src/dependency/injection.dart';
+import 'package:tach/src/services/avatar/avatar_picker.dart';
 import 'package:tach/src/presentation/home/home_screen.dart';
 import 'package:tach/src/presentation/ledger/ledger_cubit.dart';
+
+/// Ảnh PNG 1×1 hợp lệ, dùng thay cho ảnh người dùng chọn.
+final _tinyPng = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA'
+  '60e6kgAAAABJRU5ErkJggg==',
+);
+
+class _FakeAvatarPicker implements AvatarPicker {
+  final requested = <AvatarSource>[];
+
+  @override
+  Future<Uint8List?> pick(AvatarSource source) async {
+    requested.add(source);
+    if (source == AvatarSource.camera) {
+      throw PlatformException(code: 'camera_access_denied');
+    }
+    return _tinyPng;
+  }
+}
 
 Future<void> _launch(WidgetTester tester, {bool seenOnboarding = true}) async {
   tester.view.physicalSize = const Size(1170, 2532);
@@ -242,5 +265,58 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Tiếp tục với Apple'), findsOneWidget);
     expect(find.text('Hồ sơ'), findsNothing);
+  });
+
+  testWidgets('hồ sơ: chọn ảnh đại diện từ thư viện rồi gỡ ảnh', (
+    tester,
+  ) async {
+    await _launch(tester);
+    final picker = _FakeAvatarPicker();
+    getIt
+      ..unregister<AvatarPicker>()
+      ..registerSingleton<AvatarPicker>(picker);
+    await _signIn(tester);
+    final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+    Uint8List? myAvatar() => cubit.state.member(cubit.state.meId).avatarBytes;
+
+    await tester.tap(find.byTooltip('Hồ sơ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Đổi ảnh đại diện'));
+    await tester.pumpAndSettle();
+    expect(find.text('Chọn từ thư viện'), findsOneWidget);
+    expect(find.text('Gỡ ảnh'), findsNothing, reason: 'Chưa có ảnh để gỡ');
+
+    await tester.tap(find.text('Chọn từ thư viện'));
+    await tester.pumpAndSettle();
+    expect(picker.requested, [AvatarSource.gallery]);
+    expect(myAvatar(), _tinyPng);
+    expect(find.bySemanticsLabel('Ảnh đại diện của An'), findsWidgets);
+
+    await tester.tap(find.byTooltip('Đổi ảnh đại diện'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gỡ ảnh'));
+    await tester.pumpAndSettle();
+    expect(myAvatar(), isNull);
+  });
+
+  testWidgets('hồ sơ: không mở được camera thì báo lỗi và giữ ảnh cũ', (
+    tester,
+  ) async {
+    await _launch(tester);
+    getIt
+      ..unregister<AvatarPicker>()
+      ..registerSingleton<AvatarPicker>(_FakeAvatarPicker());
+    await _signIn(tester);
+    final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+
+    await tester.tap(find.byTooltip('Hồ sơ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Đổi ảnh đại diện'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Chụp ảnh mới'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Không mở được camera'), findsOneWidget);
+    expect(cubit.state.member(cubit.state.meId).avatarBytes, isNull);
   });
 }

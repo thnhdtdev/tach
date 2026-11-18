@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -80,6 +82,7 @@ class BalanceScreen extends StatelessWidget {
               _PersonRow(
                 name: state.member(t.toId).name,
                 tone: state.toneOf(t.toId),
+                photo: state.member(t.toId).avatarBytes,
                 amount: t.amount,
                 trailing: state.pendingFor(t) != null
                     ? Text(
@@ -102,6 +105,7 @@ class BalanceScreen extends StatelessWidget {
               _PersonRow(
                 name: state.member(t.fromId).name,
                 tone: state.toneOf(t.fromId),
+                photo: state.member(t.fromId).avatarBytes,
                 amount: t.amount,
                 caption: state.pendingFor(t) != null
                     ? 'Báo đã chuyển khoản'
@@ -189,6 +193,7 @@ class _PersonRow extends StatelessWidget {
   const _PersonRow({
     required this.name,
     required this.tone,
+    required this.photo,
     required this.amount,
     this.caption,
     this.trailing,
@@ -196,6 +201,7 @@ class _PersonRow extends StatelessWidget {
 
   final String name;
   final Color tone;
+  final Uint8List? photo;
   final int amount;
   final String? caption;
   final Widget? trailing;
@@ -207,7 +213,7 @@ class _PersonRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          MemberAvatar(name: name, tone: tone, size: 44),
+          MemberAvatar(name: name, tone: tone, photo: photo, size: 44),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

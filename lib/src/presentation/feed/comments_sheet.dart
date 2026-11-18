@@ -209,6 +209,7 @@ class _CommentTile extends StatelessWidget {
           MemberAvatar(
             name: state.member(comment.userId).name,
             tone: state.toneOf(comment.userId),
+            photo: state.member(comment.userId).avatarBytes,
             size: small ? 28 : 36,
           ),
           const SizedBox(width: 10),

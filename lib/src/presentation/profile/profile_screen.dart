@@ -1,7 +1,10 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../dependency/injection.dart';
+import '../../services/avatar/avatar_picker.dart';
 import '../ledger/ledger_cubit.dart';
 import '../widgets/info_line.dart';
 import '../widgets/member_avatar.dart';
@@ -26,6 +29,42 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _changeAvatar(BuildContext context, bool hasPhoto) async {
+    final action = await showModalBottomSheet<_AvatarAction>(
+      context: context,
+      backgroundColor: TachColors.paper,
+      showDragHandle: true,
+      builder: (_) => _AvatarOptions(hasPhoto: hasPhoto),
+    );
+    if (action == null || !context.mounted) return;
+
+    final cubit = context.read<LedgerCubit>();
+    final messenger = ScaffoldMessenger.of(context);
+    if (action == _AvatarAction.remove) {
+      cubit.setMyAvatar(null);
+      return;
+    }
+
+    final fromCamera = action == _AvatarAction.camera;
+    try {
+      final bytes = await getIt<AvatarPicker>().pick(
+        fromCamera ? AvatarSource.camera : AvatarSource.gallery,
+      );
+      if (bytes != null) cubit.setMyAvatar(bytes);
+    } on PlatformException {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            fromCamera
+                ? 'Không mở được camera. Kiểm tra quyền camera trong Cài đặt.'
+                : 'Không mở được thư viện ảnh. Kiểm tra quyền truy cập ảnh '
+                      'trong Cài đặt.',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
@@ -40,7 +79,15 @@ class ProfileScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              MemberAvatar(name: me.name, tone: state.toneOf(me.id), size: 72),
+              _EditableAvatar(
+                onTap: () => _changeAvatar(context, me.avatarBytes != null),
+                child: MemberAvatar(
+                  name: me.name,
+                  tone: state.toneOf(me.id),
+                  photo: me.avatarBytes,
+                  size: 72,
+                ),
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -125,7 +172,11 @@ class ProfileScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 7),
               child: Row(
                 children: [
-                  MemberAvatar(name: m.name, tone: state.toneOf(m.id)),
+                  MemberAvatar(
+                    name: m.name,
+                    tone: state.toneOf(m.id),
+                    photo: m.avatarBytes,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(child: Text(m.name, style: text.bodyLarge)),
                   if (m.id == state.meId) Text('Bạn', style: text.bodySmall),
@@ -134,6 +185,98 @@ class ProfileScreen extends StatelessWidget {
             ),
           const SizedBox(height: 36),
           OutlinedButton(onPressed: onSignOut, child: const Text('Đăng xuất')),
+        ],
+      ),
+    );
+  }
+}
+
+enum _AvatarAction { gallery, camera, remove }
+
+/// Avatar có huy hiệu máy ảnh, chạm để đổi ảnh đại diện.
+class _EditableAvatar extends StatelessWidget {
+  const _EditableAvatar({required this.onTap, required this.child});
+
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Đổi ảnh đại diện',
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            child,
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: TachColors.paper,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: TachColors.line),
+                ),
+                child: const Icon(
+                  Icons.photo_camera_outlined,
+                  size: 16,
+                  color: TachColors.ink,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarOptions extends StatelessWidget {
+  const _AvatarOptions({required this.hasPhoto});
+
+  final bool hasPhoto;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+
+    Widget option(IconData icon, String label, _AvatarAction action) {
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+        leading: Icon(icon, color: TachColors.ink),
+        title: Text(label, style: text.bodyLarge),
+        onTap: () => Navigator.of(context).pop(action),
+      );
+    }
+
+    return SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Text('Ảnh đại diện', style: text.titleLarge),
+          ),
+          option(
+            Icons.photo_library_outlined,
+            'Chọn từ thư viện',
+            _AvatarAction.gallery,
+          ),
+          option(
+            Icons.photo_camera_outlined,
+            'Chụp ảnh mới',
+            _AvatarAction.camera,
+          ),
+          if (hasPhoto)
+            option(Icons.delete_outline, 'Gỡ ảnh', _AvatarAction.remove),
+          const SizedBox(height: 8),
         ],
       ),
     );

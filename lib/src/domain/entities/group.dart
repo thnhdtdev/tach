@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 /// Tài khoản ngân hàng để nhận tiền qua VietQR.
 class BankAccount {
   const BankAccount({
@@ -15,17 +17,35 @@ class BankAccount {
 }
 
 class Member {
-  const Member({required this.id, required this.name, this.bank});
+  const Member({
+    required this.id,
+    required this.name,
+    this.bank,
+    this.avatarBytes,
+  });
 
   final String id;
   final String name;
   final BankAccount? bank;
 
-  Member copyWith({String? name}) =>
-      Member(id: id, name: name ?? this.name, bank: bank);
+  /// Ảnh đại diện đã chọn, giữ trong bộ nhớ. Khi có nơi lưu ảnh trên máy chủ
+  /// thì trường này sẽ thay bằng đường dẫn ảnh.
+  final Uint8List? avatarBytes;
+
+  Member copyWith({String? name}) => Member(
+    id: id,
+    name: name ?? this.name,
+    bank: bank,
+    avatarBytes: avatarBytes,
+  );
 
   /// Đặt lại tài khoản nhận tiền; truyền `null` để gỡ tài khoản.
-  Member withBank(BankAccount? bank) => Member(id: id, name: name, bank: bank);
+  Member withBank(BankAccount? bank) =>
+      Member(id: id, name: name, bank: bank, avatarBytes: avatarBytes);
+
+  /// Đặt lại ảnh đại diện; truyền `null` để gỡ ảnh.
+  Member withAvatar(Uint8List? bytes) =>
+      Member(id: id, name: name, bank: bank, avatarBytes: bytes);
 }
 
 class Group {

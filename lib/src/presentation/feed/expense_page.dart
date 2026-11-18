@@ -80,6 +80,7 @@ class ExpensePage extends StatelessWidget {
                 MemberAvatar(
                   name: state.member(expense.payerId).name,
                   tone: state.toneOf(expense.payerId),
+                  photo: state.member(expense.payerId).avatarBytes,
                 ),
                 const SizedBox(width: 10),
                 Expanded(

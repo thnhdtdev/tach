@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -199,6 +201,9 @@ class LedgerCubit extends Cubit<LedgerState> {
 
   /// Đặt tài khoản nhận tiền của người dùng; `null` để gỡ.
   void setMyBank(BankAccount? bank) => _updateMe((me) => me.withBank(bank));
+
+  /// Đặt ảnh đại diện của người dùng; `null` để gỡ.
+  void setMyAvatar(Uint8List? bytes) => _updateMe((me) => me.withAvatar(bytes));
 
   /// Nội dung chuyển khoản riêng cho khoản [transfer].
   String transferCodeFor(Transfer transfer) => buildTransferCode(

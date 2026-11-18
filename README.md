@@ -1,0 +1,47 @@
+# Tach
+
+**Chụp là ghi, tách là xong.**
+
+Tach là app ghi chi tiêu chung bằng cách chụp ảnh, dành cho phòng trọ ở ghép, nhóm bạn đi trip và gia đình. Mỗi khi mua gì cho cả nhóm, bạn chụp một tấm ảnh, nhập số tiền, và app tự tính ai nợ ai. Cuối tháng mỗi người nhận một mã VietQR để trả ngay.
+
+## Tính năng MVP
+
+- Ghi khoản chi bằng camera: chụp, nhập tiền, chọn người chia, gửi
+- Bảng tin ảnh của nhóm và widget trên màn hình chính
+- Số dư ai nợ ai, gộp các khoản nợ chéo
+- Thanh toán bằng VietQR
+- Tổng kết tháng dạng ảnh ghép
+
+## Công nghệ
+
+| Phần | Lựa chọn |
+|---|---|
+| App | Flutter (iOS, Android) |
+| Backend | Supabase (Postgres, Auth, Storage) |
+| Widget màn hình chính | `home_widget` + WidgetKit (iOS) / Kotlin (Android) |
+| Thanh toán | VietQR (chỉ tạo mã, app không giữ tiền) |
+
+## Cấu trúc thư mục
+
+```
+lib/        Mã nguồn Flutter
+test/       Test
+ios/        Project iOS (bundle id: vn.tachapp.tach)
+android/    Project Android (applicationId: vn.tachapp.tach)
+web/        Bản web (dự kiến cho trang xem tổng kết khi chưa cài app)
+supabase/   Migration và cấu hình Supabase
+docs/       Tài liệu sản phẩm và thương hiệu
+```
+
+## Chạy app
+
+```bash
+flutter pub get
+flutter run
+```
+
+Chạy test:
+
+```bash
+flutter test
+```

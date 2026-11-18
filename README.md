@@ -55,7 +55,7 @@ Giao diện MVP đã dựng xong và chạy bằng dữ liệu mẫu trong bộ 
 (`lib/src/datasource/sample/`). Chưa nối: Supabase, camera thật, đăng nhập,
 widget màn hình chính. Ảnh khoản chi đang là ảnh minh họa vẽ sẵn.
 
-Font chữ là Be Vietnam Pro, giấy phép SIL Open Font License
+Font chữ là Montserrat, giấy phép SIL Open Font License
 (`assets/fonts/OFL.txt`).
 
 ## Chạy app

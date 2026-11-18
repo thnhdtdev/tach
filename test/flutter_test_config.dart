@@ -9,9 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final loader = FontLoader('BeVietnamPro');
+  final loader = FontLoader('Montserrat');
   for (final weight in ['Regular', 'Medium', 'SemiBold', 'Bold']) {
-    final file = File('assets/fonts/BeVietnamPro-$weight.ttf');
+    final file = File('assets/fonts/Montserrat-$weight.ttf');
     loader.addFont(
       file.readAsBytes().then((bytes) => ByteData.view(bytes.buffer)),
     );

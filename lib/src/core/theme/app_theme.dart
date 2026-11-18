@@ -2,7 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'app_colors.dart';
 
-const _family = 'BeVietnamPro';
+const _family = 'Montserrat';
 
 /// Cỡ chữ chung. Chiều cao dòng rộng hơn mặc định để dấu tiếng Việt
 /// (ví dụ "ễ", "ậ") không chạm dòng trên.

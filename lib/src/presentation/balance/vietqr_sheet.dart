@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../domain/entities/settlement.dart';
 import '../../services/vietqr/vietqr_payload.dart';
 import '../ledger/ledger_cubit.dart';
+import '../widgets/info_line.dart';
 
 /// Bảng trượt lên để trả một khoản bằng VietQR.
 ///
@@ -88,14 +89,14 @@ class _VietQrSheetState extends State<VietQrSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              _InfoLine(label: 'Ngân hàng', value: bank.bankName),
-              _InfoLine(label: 'Số tài khoản', value: bank.accountNumber),
-              _InfoLine(label: 'Chủ tài khoản', value: bank.holderName),
+              InfoLine(label: 'Ngân hàng', value: bank.bankName),
+              InfoLine(label: 'Số tài khoản', value: bank.accountNumber),
+              InfoLine(label: 'Chủ tài khoản', value: bank.holderName),
             ],
             Row(
               children: [
                 Expanded(
-                  child: _InfoLine(label: 'Nội dung', value: code),
+                  child: InfoLine(label: 'Nội dung', value: code),
                 ),
                 TextButton.icon(
                   onPressed: () => _copy(code),
@@ -126,33 +127,6 @@ class _VietQrSheetState extends State<VietQrSheet> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _InfoLine extends StatelessWidget {
-  const _InfoLine({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(width: 116, child: Text(label, style: text.bodyMedium)),
-          Expanded(
-            child: Text(
-              value,
-              style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
       ),
     );
   }

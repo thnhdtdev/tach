@@ -57,7 +57,10 @@ class _LaunchGateState extends State<LaunchGate> {
           key: const ValueKey(_Step.login),
           onSignedIn: () => setState(() => _step = _Step.home),
         ),
-        _Step.home => const HomeScreen(key: ValueKey(_Step.home)),
+        _Step.home => HomeScreen(
+          key: const ValueKey(_Step.home),
+          onSignOut: () => setState(() => _step = _Step.login),
+        ),
       },
     );
   }

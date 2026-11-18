@@ -70,12 +70,13 @@ class LedgerState {
   }
 
   LedgerState copyWith({
+    Group? group,
     List<Expense>? expenses,
     List<Settlement>? settlements,
   }) {
     return LedgerState(
       isLoading: isLoading,
-      group: group,
+      group: group ?? this.group,
       meId: meId,
       expenses: expenses ?? this.expenses,
       settlements: settlements ?? this.settlements,
@@ -175,6 +176,29 @@ class LedgerCubit extends Cubit<LedgerState> {
       );
     });
   }
+
+  void _updateMe(Member Function(Member) change) {
+    emit(
+      state.copyWith(
+        group: state.group.copyWith(
+          members: [
+            for (final m in state.group.members)
+              if (m.id == state.meId) change(m) else m,
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Đổi tên hiển thị của chính người dùng. Bỏ qua tên trống.
+  void renameMe(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    _updateMe((me) => me.copyWith(name: trimmed));
+  }
+
+  /// Đặt tài khoản nhận tiền của người dùng; `null` để gỡ.
+  void setMyBank(BankAccount? bank) => _updateMe((me) => me.withBank(bank));
 
   /// Nội dung chuyển khoản riêng cho khoản [transfer].
   String transferCodeFor(Transfer transfer) => buildTransferCode(

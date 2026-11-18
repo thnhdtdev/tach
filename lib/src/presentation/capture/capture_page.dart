@@ -21,11 +21,13 @@ class CapturePage extends StatefulWidget {
     super.key,
     required this.onBusyChanged,
     required this.onOpenFeed,
+    required this.onOpenProfile,
   });
 
   /// Báo `true` khi đang ghi dở một khoản, để màn ngoài khóa thao tác vuốt.
   final ValueChanged<bool> onBusyChanged;
   final VoidCallback onOpenFeed;
+  final VoidCallback onOpenProfile;
 
   @override
   State<CapturePage> createState() => _CapturePageState();
@@ -197,7 +199,7 @@ class _CapturePageState extends State<CapturePage> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              const SizedBox(width: 36),
+              const SizedBox(width: 44),
               Expanded(
                 child: Center(
                   child: Container(
@@ -223,9 +225,21 @@ class _CapturePageState extends State<CapturePage> {
                   ),
                 ),
               ),
-              MemberAvatar(
-                name: state.member(state.meId).name,
-                tone: state.toneOf(state.meId),
+              Tooltip(
+                message: 'Hồ sơ',
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: widget.onOpenProfile,
+                  child: SizedBox.square(
+                    dimension: 44,
+                    child: Center(
+                      child: MemberAvatar(
+                        name: state.member(state.meId).name,
+                        tone: state.toneOf(state.meId),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

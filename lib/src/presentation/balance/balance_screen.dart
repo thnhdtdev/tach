@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../domain/entities/settlement.dart';
 import '../ledger/ledger_cubit.dart';
 import '../widgets/member_avatar.dart';
+import '../widgets/section_title.dart';
 import 'vietqr_sheet.dart';
 
 /// Số dư: bạn cần trả ai bao nhiêu sau khi đã gộp nợ chéo.
@@ -74,7 +75,7 @@ class BalanceScreen extends StatelessWidget {
             style: text.bodyMedium,
           ),
           if (toPay.isNotEmpty) ...[
-            const _SectionTitle('Trả cho ai'),
+            const SectionTitle('Trả cho ai'),
             for (final t in toPay)
               _PersonRow(
                 name: state.member(t.toId).name,
@@ -96,7 +97,7 @@ class BalanceScreen extends StatelessWidget {
               ),
           ],
           if (toReceive.isNotEmpty) ...[
-            const _SectionTitle('Sẽ trả cho bạn'),
+            const SectionTitle('Sẽ trả cho bạn'),
             for (final t in toReceive)
               _PersonRow(
                 name: state.member(t.fromId).name,
@@ -118,7 +119,7 @@ class BalanceScreen extends StatelessWidget {
               ),
           ],
           if (others.isNotEmpty) ...[
-            const _SectionTitle('Trong nhóm'),
+            const SectionTitle('Trong nhóm'),
             for (final t in others)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -142,7 +143,7 @@ class BalanceScreen extends StatelessWidget {
               ),
           ],
           if (paid.isNotEmpty) ...[
-            const _SectionTitle('Đã trả'),
+            const SectionTitle('Đã trả'),
             for (final s in paid)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -178,27 +179,6 @@ class BalanceScreen extends StatelessWidget {
                 ),
               ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 28, bottom: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          const Divider(height: 1),
         ],
       ),
     );

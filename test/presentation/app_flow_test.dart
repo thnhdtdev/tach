@@ -177,4 +177,70 @@ void main() {
     expect(find.text('Để mình nấu'), findsOneWidget);
     expect(find.text('Đang trả lời Hùng'), findsNothing);
   });
+
+  testWidgets('hồ sơ: đổi tên, sửa tài khoản nhận tiền và đăng xuất', (
+    tester,
+  ) async {
+    await _launch(tester);
+    await _signIn(tester);
+
+    await tester.tap(find.byTooltip('Hồ sơ'));
+    await tester.pumpAndSettle();
+    expect(find.text('Thành viên Trọ 12'), findsOneWidget);
+    expect(find.text('MB Bank'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Đổi tên'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Ánh');
+    await tester.pump();
+    await tester.tap(find.text('Lưu tên'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Ánh'),
+      findsNWidgets(2),
+      reason: 'đầu trang và danh sách nhóm',
+    );
+
+    await tester.tap(find.text('Sửa tài khoản'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Số tài khoản'),
+      '12345',
+    );
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Lưu tài khoản'),
+          )
+          .onPressed,
+      isNull,
+      reason: 'Số tài khoản quá ngắn thì chưa lưu được',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Số tài khoản'),
+      '123456789',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Tên chủ tài khoản'),
+      'Nguyễn Văn Ánh',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Lưu tài khoản'));
+    await tester.pumpAndSettle();
+    expect(find.text('123456789'), findsOneWidget);
+    expect(find.text('NGUYEN VAN ANH'), findsOneWidget);
+
+    await tester.tap(find.text('Sửa tài khoản'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gỡ tài khoản'));
+    await tester.pumpAndSettle();
+    expect(find.text('Thêm tài khoản'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('Đăng xuất'), 200);
+    await tester.tap(find.text('Đăng xuất'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tiếp tục với Apple'), findsOneWidget);
+    expect(find.text('Hồ sơ'), findsNothing);
+  });
 }

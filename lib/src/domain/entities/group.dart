@@ -20,6 +20,12 @@ class Member {
   final String id;
   final String name;
   final BankAccount? bank;
+
+  Member copyWith({String? name}) =>
+      Member(id: id, name: name ?? this.name, bank: bank);
+
+  /// Đặt lại tài khoản nhận tiền; truyền `null` để gỡ tài khoản.
+  Member withBank(BankAccount? bank) => Member(id: id, name: name, bank: bank);
 }
 
 class Group {
@@ -36,4 +42,7 @@ class Group {
   /// Mã ngắn không dấu, dùng trong nội dung chuyển khoản (ví dụ `TRO12`).
   final String code;
   final List<Member> members;
+
+  Group copyWith({List<Member>? members}) =>
+      Group(id: id, name: name, code: code, members: members ?? this.members);
 }

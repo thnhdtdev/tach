@@ -9,10 +9,13 @@ import '../capture/capture_page.dart';
 import '../feed/expense_page.dart';
 import '../ledger/ledger_cubit.dart';
 import '../month/month_grid_screen.dart';
+import '../profile/profile_screen.dart';
 
 /// Màn chính: camera ở trên cùng, vuốt lên là bảng tin, mỗi màn một khoản chi.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, required this.onSignOut});
+
+  final VoidCallback onSignOut;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -52,6 +55,19 @@ class _HomeScreenState extends State<HomeScreen> {
         .push(MaterialPageRoute<void>(builder: (_) => const BalanceScreen()));
   }
 
+  void _openProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ProfileScreen(
+          onSignOut: () {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+            widget.onSignOut();
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<LedgerCubit>().state;
@@ -83,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             onBusyChanged: (busy) =>
                                 setState(() => _capturing = busy),
                             onOpenFeed: () => _goToPage(1),
+                            onOpenProfile: _openProfile,
                           );
                         }
                         final expense = state.expenses[page - 1];

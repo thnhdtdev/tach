@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tach/src/datasource/sample/sample_group_repository.dart';
+import 'package:tach/src/domain/entities/group.dart';
 import 'package:tach/src/domain/entities/settlement.dart';
 import 'package:tach/src/presentation/ledger/ledger_cubit.dart';
 
@@ -58,6 +59,48 @@ void main() {
     final added = cubit.state.expenses.first.comments.last;
     expect(added.text, 'Để mình nấu');
     expect(added.parentId, 'c-2');
+  });
+
+  test(
+    'đổi tên: tên mới dùng trong nội dung chuyển khoản, tên trống bị bỏ qua',
+    () {
+      cubit.renameMe('  Ánh  ');
+      expect(cubit.state.member(cubit.state.meId).name, 'Ánh');
+
+      cubit.renameMe('   ');
+      expect(cubit.state.member(cubit.state.meId).name, 'Ánh');
+
+      final transfer = cubit.state.transfers.singleWhere(
+        (t) => t.fromId == cubit.state.meId,
+      );
+      expect(cubit.transferCodeFor(transfer), startsWith('TRO12 ANH T'));
+    },
+  );
+
+  test('đặt và gỡ tài khoản nhận tiền chỉ đổi hồ sơ của mình', () {
+    final me = cubit.state.meId;
+    final othersBefore = [
+      for (final m in cubit.state.group.members)
+        if (m.id != me) m.bank?.accountNumber,
+    ];
+
+    cubit.setMyBank(
+      const BankAccount(
+        bin: '970436',
+        bankName: 'Vietcombank',
+        accountNumber: '123456789',
+        holderName: 'NGUYEN VAN AN',
+      ),
+    );
+    expect(cubit.state.member(me).bank?.bankName, 'Vietcombank');
+
+    cubit.setMyBank(null);
+    expect(cubit.state.member(me).bank, isNull);
+    expect([
+      for (final m in cubit.state.group.members)
+        if (m.id != me) m.bank?.accountNumber,
+    ], othersBefore);
+    expect(cubit.state.myNet, -266000);
   });
 
   test('báo đã chuyển thì chờ xác nhận; xác nhận xong mới hết nợ', () {

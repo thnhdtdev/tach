@@ -292,7 +292,13 @@ class ExpensePage extends StatelessWidget {
                           ),
                           child: Text(
                             emoji,
-                            style: const TextStyle(fontSize: 20, height: 1.1),
+                            // Màu chữ thừa hưởng là trắng mờ, làm emoji mờ
+                            // theo; đặt trắng hẳn để emoji lên đủ màu.
+                            style: const TextStyle(
+                              fontSize: 20,
+                              height: 1.1,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -320,12 +326,13 @@ class ExpensePage extends StatelessWidget {
                                 style: const TextStyle(
                                   fontSize: 20,
                                   height: 1.1,
+                                  color: Colors.white,
                                 ),
                               )
-                            : Icon(
+                            : const Icon(
                                 Icons.add_reaction_outlined,
-                                size: 22,
-                                color: Colors.white.withValues(alpha: 0.7),
+                                size: 24,
+                                color: Colors.white,
                               ),
                       ),
                     ),

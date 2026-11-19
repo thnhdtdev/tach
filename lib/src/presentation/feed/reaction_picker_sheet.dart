@@ -206,7 +206,11 @@ class _EmojiCell extends StatelessWidget {
           shape: BoxShape.circle,
           color: selected ? TachColors.mint.withValues(alpha: 0.35) : null,
         ),
-        child: Text(emoji.emoji, style: TextStyle(fontSize: size, height: 1.1)),
+        child: Text(
+          emoji.emoji,
+          // Màu trắng hẳn để emoji không bị mờ theo màu chữ thừa hưởng.
+          style: TextStyle(fontSize: size, height: 1.1, color: Colors.white),
+        ),
       ),
     );
   }

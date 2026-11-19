@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../photo/photo_compressor.dart';
+import 'frame_color.dart';
 import 'zoom_plan.dart';
 
 enum CameraStatus {
@@ -28,6 +32,9 @@ abstract interface class CaptureCamera {
   Widget preview();
 
   Future<Uint8List> takePhoto();
+
+  /// Màu trung bình của hình đang ngắm; `null` khi chưa lấy được.
+  Future<Color?> previewColor();
 
   /// Trả về `false` nếu camera không có đèn flash.
   Future<bool> setFlash(bool on);
@@ -62,6 +69,7 @@ class PluginCaptureCamera implements CaptureCamera {
 
   /// Tăng mỗi lần [close]; lần mở nào xong sau khi đã có lệnh đóng thì tự hủy.
   var _closes = 0;
+  var _readingFrame = false;
 
   @override
   double get minZoom => _hasUltraWide ? ultraWideZoom : 1;
@@ -230,6 +238,56 @@ class PluginCaptureCamera implements CaptureCamera {
     // Khung ngắm camera trước là hình soi gương còn ảnh chụp thì không; lật lại
     // để ảnh giống đúng lúc ngắm.
     return front ? squareJpeg(bytes, quality: 95, mirror: true) : bytes;
+  }
+
+  @override
+  Future<Color?> previewColor() async {
+    final controller = _controller;
+    // Chỉ iOS: ở đó bật tắt luồng khung hình không đụng tới hình xem trực tiếp.
+    // Android phải gắn thêm một luồng phân tích ảnh mỗi lần, chưa thử được.
+    if (controller == null ||
+        _readingFrame ||
+        defaultTargetPlatform != TargetPlatform.iOS ||
+        controller.value.isTakingPicture ||
+        controller.value.isStreamingImages) {
+      return null;
+    }
+
+    // Mỗi khung hình nặng cỡ 8 MB, nên chỉ lấy một khung rồi tắt luồng ngay
+    // thay vì để luồng chạy suốt.
+    _readingFrame = true;
+    final color = Completer<Color?>();
+    try {
+      await controller.startImageStream((image) {
+        if (color.isCompleted) return;
+        final plane = image.planes.first;
+        color.complete(
+          image.format.group == ImageFormatGroup.bgra8888
+              ? averageBgraColor(
+                  plane.bytes,
+                  width: image.width,
+                  height: image.height,
+                  bytesPerRow: plane.bytesPerRow,
+                )
+              : null,
+        );
+      });
+      return await color.future.timeout(
+        const Duration(seconds: 1),
+        onTimeout: () => null,
+      );
+    } on Exception {
+      return null;
+    } finally {
+      try {
+        if (controller.value.isStreamingImages) {
+          await controller.stopImageStream();
+        }
+      } on Exception {
+        // Camera đã đóng trong lúc đọc; luồng khung hình đóng theo nó.
+      }
+      _readingFrame = false;
+    }
   }
 
   @override

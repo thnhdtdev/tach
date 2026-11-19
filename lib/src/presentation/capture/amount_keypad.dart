@@ -1,7 +1,5 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../../core/theme/app_colors.dart';
-
 class AmountKeypad extends StatelessWidget {
   const AmountKeypad({super.key, required this.onKey});
 
@@ -52,7 +50,7 @@ class _Key extends StatelessWidget {
       label: isBackspace ? 'Xóa' : value,
       excludeSemantics: true,
       child: Material(
-        color: TachColors.nightRaised,
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           key: ValueKey('key-$value'),

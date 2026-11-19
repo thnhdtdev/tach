@@ -10,6 +10,7 @@ import '../../core/format/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../dependency/injection.dart';
 import '../../services/camera/capture_camera.dart';
+import '../../services/photo/photo_color.dart';
 import '../ledger/ledger_cubit.dart';
 import '../widgets/expense_photo.dart';
 import '../widgets/member_avatar.dart';
@@ -22,12 +23,16 @@ class CapturePage extends StatefulWidget {
   const CapturePage({
     super.key,
     required this.onBusyChanged,
+    required this.onFrameColorChanged,
     required this.onOpenFeed,
     required this.onOpenProfile,
     required this.onOpenGroups,
   });
 
   final ValueChanged<bool> onBusyChanged;
+
+  /// Màu chủ đạo của hình đang ngắm hoặc ảnh vừa chụp; `null` khi chưa có hình.
+  final ValueChanged<Color?> onFrameColorChanged;
   final VoidCallback onOpenFeed;
   final VoidCallback onOpenProfile;
   final VoidCallback onOpenGroups;
@@ -68,6 +73,9 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   String? _toast;
   Timer? _toastTimer;
 
+  Timer? _frameColorTimer;
+  Color? _viewfinderColor;
+
   int get _amount => _digits.isEmpty ? 0 : int.parse(_digits) * 1000;
 
   bool get _useSamplePhoto =>
@@ -101,6 +109,33 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _noteFocus.addListener(_onNoteFocusChanged);
+    _frameColorTimer = Timer.periodic(
+      const Duration(milliseconds: 800),
+      (_) => _readViewfinderColor(),
+    );
+  }
+
+  bool get _viewfinderLive =>
+      _stage == _Stage.viewfinder &&
+      _cameraStatus == CameraStatus.ready &&
+      !_takingPhoto;
+
+  Future<void> _readViewfinderColor() async {
+    if (!mounted || !_viewfinderLive) return;
+    final color = await _camera.previewColor();
+    if (!mounted || color == null || !_viewfinderLive) return;
+    _viewfinderColor = color;
+    widget.onFrameColorChanged(color);
+  }
+
+  void _reportViewfinderColor() {
+    widget.onFrameColorChanged(switch (_cameraStatus) {
+      CameraStatus.ready => _viewfinderColor,
+      CameraStatus.unavailable when _useSamplePhoto => ExpensePhoto.sampleColor(
+        'sample:viewfinder',
+      ),
+      _ => null,
+    });
   }
 
   void _onNoteFocusChanged() {
@@ -161,6 +196,8 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       _cameraStatus = status;
       _zoom = 1;
     });
+    if (_stage == _Stage.viewfinder) _reportViewfinderColor();
+    _readViewfinderColor();
 
     if (status == CameraStatus.ready && _flashOn) {
       // Camera trước thường không có đèn flash; khi đó tắt nút flash theo.
@@ -174,6 +211,7 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _camera.close();
     _toastTimer?.cancel();
+    _frameColorTimer?.cancel();
     _note.dispose();
     _noteFocus.dispose();
     super.dispose();
@@ -184,6 +222,7 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     final isBusy = stage != _Stage.viewfinder;
     setState(() => _stage = stage);
     if (wasBusy != isBusy) widget.onBusyChanged(isBusy);
+    if (!isBusy) _reportViewfinderColor();
   }
 
   void _start({String? photoUrl, Uint8List? photoBytes}) {
@@ -195,6 +234,22 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       _note.clear();
     });
     _setStage(_Stage.amount);
+    _reportPhotoColor(photoUrl, photoBytes);
+  }
+
+  Future<void> _reportPhotoColor(String? url, Uint8List? bytes) async {
+    if (bytes == null) {
+      if (url != null) {
+        widget.onFrameColorChanged(ExpensePhoto.sampleColor(url));
+      }
+      return;
+    }
+    final shot = _captures;
+    final color = await averagePhotoColor(bytes);
+    final stillThisShot = shot == _captures && _stage != _Stage.viewfinder;
+    if (mounted && stillThisShot && color != null) {
+      widget.onFrameColorChanged(color);
+    }
   }
 
   Future<void> _shoot() async {
@@ -542,7 +597,7 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                       },
                 style: FilledButton.styleFrom(
                   minimumSize: const Size(84, 40),
-                  disabledBackgroundColor: TachColors.nightRaised,
+                  disabledBackgroundColor: Colors.white.withValues(alpha: 0.1),
                   disabledForegroundColor: Colors.white.withValues(alpha: 0.4),
                 ),
                 child: const Text('Xong'),
@@ -811,7 +866,9 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
             button: true,
             label: 'Gửi',
             child: Material(
-              color: count == 0 ? TachColors.nightRaised : TachColors.mint,
+              color: count == 0
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : TachColors.mint,
               shape: const CircleBorder(),
               child: InkWell(
                 customBorder: const CircleBorder(),

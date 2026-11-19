@@ -101,6 +101,8 @@ class _NoCamera implements CaptureCamera {
   @override
   Future<Uint8List> takePhoto() => throw UnimplementedError();
   @override
+  Future<Color?> previewColor() async => null;
+  @override
   Future<bool> setFlash(bool on) async => false;
   @override
   Future<CameraStatus> setZoom(double level) => open();

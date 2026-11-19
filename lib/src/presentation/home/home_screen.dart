@@ -31,6 +31,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _pages = PageController();
   final _photoColors = PhotoColors();
+  final _cameraColor = ValueNotifier<Color?>(null);
   StreamSubscription<void>? _saveFailures;
   var _onFeed = false;
   var _capturing = false;
@@ -68,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _saveFailures?.cancel();
     _pages.dispose();
     _photoColors.dispose();
+    _cameraColor.dispose();
     super.dispose();
   }
 
@@ -187,6 +189,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               child: FeedBackground(
                                 pages: _pages,
                                 colors: _photoColors,
+                                camera: _cameraColor,
                                 expenses: state.expenses,
                               ),
                             ),
@@ -204,6 +207,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   return CapturePage(
                                     onBusyChanged: (busy) =>
                                         setState(() => _capturing = busy),
+                                    onFrameColorChanged: (color) =>
+                                        _cameraColor.value = color,
                                     onOpenFeed: () => _goToPage(1),
                                     onOpenProfile: _openProfile,
                                     onOpenGroups: _openGroups,

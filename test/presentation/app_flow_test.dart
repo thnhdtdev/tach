@@ -12,6 +12,7 @@ import 'package:tach/src/domain/entities/group.dart';
 import 'package:tach/src/services/avatar/avatar_picker.dart';
 import 'package:tach/src/services/camera/capture_camera.dart';
 import 'package:tach/src/services/camera/zoom_plan.dart';
+import 'package:tach/src/presentation/feed/feed_background.dart';
 import 'package:tach/src/presentation/home/home_screen.dart';
 import 'package:tach/src/presentation/ledger/ledger_cubit.dart';
 import 'package:tach/src/presentation/widgets/expense_photo.dart';
@@ -115,6 +116,11 @@ class _FakeCamera implements CaptureCamera {
     return _tinyPng;
   }
 
+  Color? frameColor;
+
+  @override
+  Future<Color?> previewColor() async => frameColor;
+
   @override
   Future<bool> setFlash(bool on) async {
     if (!hasFlash) return false;
@@ -149,6 +155,14 @@ Future<void> _launch(
 
   await tester.pumpWidget(const TachApp());
   await tester.pumpAndSettle();
+}
+
+List<Color> _background(WidgetTester tester) {
+  final box = tester.widget<AnimatedContainer>(
+    find.byKey(const ValueKey('feed-background')),
+  );
+  return ((box.decoration! as BoxDecoration).gradient! as LinearGradient)
+      .colors;
 }
 
 Future<void> _signIn(WidgetTester tester) async {
@@ -247,11 +261,11 @@ void main() {
     expect(find.text('30.000đ'), findsOneWidget);
     expect(find.textContaining('Bạn nợ 7.500đ'), findsOneWidget);
 
-    final background = tester.widget<DecoratedBox>(
+    final background = tester.widget<AnimatedContainer>(
       find.byKey(const ValueKey('feed-background')),
     );
     final gradient =
-        (background.decoration as BoxDecoration).gradient! as LinearGradient;
+        (background.decoration! as BoxDecoration).gradient! as LinearGradient;
     expect(gradient.colors, everyElement(isNot(TachColors.night)));
 
     await tester.tap(find.byTooltip('Số dư'));
@@ -1000,8 +1014,12 @@ void main() {
       final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
       expect(find.text('Máy này không có camera'), findsOneWidget);
 
+      expect(_background(tester), everyElement(isNot(TachColors.night)));
+
       await tester.tap(find.bySemanticsLabel('Chụp'));
       await tester.pumpAndSettle();
+      expect(_background(tester), everyElement(isNot(TachColors.night)));
+
       await tester.tap(find.byKey(const ValueKey('key-2')));
       await tester.pump();
       await tester.tap(find.text('Xong'));
@@ -1013,6 +1031,34 @@ void main() {
       expect(cubit.state.expenses.first.photoBytes, isNull);
       await tester.pump(const Duration(seconds: 3));
     });
+
+    testWidgets(
+      'nền ngả theo màu hình đang ngắm, camera chưa có hình thì đen',
+      (tester) async {
+        await _launch(tester);
+        await _signIn(tester);
+        expect(_background(tester), everyElement(TachColors.night));
+
+        _camera.frameColor = const Color(0xFFBE9678);
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pumpAndSettle();
+        final brown = photoTint(const Color(0xFFBE9678));
+        expect(_background(tester), [brown.top, brown.bottom]);
+
+        _camera.frameColor = const Color(0xFF2E6BD6);
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pumpAndSettle();
+        final blue = photoTint(const Color(0xFF2E6BD6));
+        expect(_background(tester), [blue.top, blue.bottom]);
+
+        await tester.tap(find.bySemanticsLabel('Chụp'));
+        await tester.pumpAndSettle();
+        _camera.frameColor = const Color(0xFF00FF00);
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pumpAndSettle();
+        expect(_background(tester), [blue.top, blue.bottom]);
+      },
+    );
 
     testWidgets('chụp lỗi: báo thử lại và ở lại màn camera', (tester) async {
       await _launch(tester);

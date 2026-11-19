@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -9,13 +10,15 @@ import '../../services/photo/photo_color.dart';
 import '../../services/photo/photo_loader.dart';
 import '../widgets/expense_photo.dart';
 
-/// Hai màu nền tối, cùng tông với [photo], đủ tối để chữ trắng vẫn dễ đọc.
+/// Hai màu nền cùng tông với [photo]. Ảnh càng sáng thì nền càng sáng, nhưng
+/// dừng ở mức chữ trắng còn dễ đọc.
 ({Color top, Color bottom}) photoTint(Color photo) {
   final hsl = HSLColor.fromColor(photo);
   final saturation = math.min(hsl.saturation * 1.4, 0.5);
   Color shade(double lightness) =>
       hsl.withSaturation(saturation).withLightness(lightness).toColor();
-  return (top: shade(0.08), bottom: shade(0.17));
+  final bottom = 0.10 + 0.24 * hsl.lightness;
+  return (top: shade(bottom * 0.6), bottom: shade(bottom));
 }
 
 /// Màu chủ đạo của ảnh từng khoản chi; báo cho người nghe khi đọc xong một ảnh.
@@ -60,31 +63,41 @@ class PhotoColors extends ChangeNotifier {
   }
 }
 
-/// Nền của bảng tin: ngả theo màu ảnh của khoản chi đang xem, và hòa dần sang
-/// màu của khoản kế tiếp khi vuốt. Trang 0 là camera, nền đen.
+/// Nền của màn chính: ngả theo màu ảnh của khoản chi đang xem, và hòa dần sang
+/// màu của khoản kế tiếp khi vuốt. Trang 0 là camera: ngả theo hình đang ngắm
+/// hoặc ảnh vừa chụp.
 class FeedBackground extends StatelessWidget {
   const FeedBackground({
     super.key,
     required this.pages,
     required this.colors,
+    required this.camera,
     required this.expenses,
   });
 
   final PageController pages;
   final PhotoColors colors;
+
+  /// Màu của khung hình ở trang camera; `null` khi camera chưa có hình.
+  final ValueListenable<Color?> camera;
+
   final List<Expense> expenses;
 
   ({Color top, Color bottom}) _tintOf(int page) {
-    const black = (top: TachColors.night, bottom: TachColors.night);
-    if (page < 1 || page > expenses.length) return black;
-    final color = colors.of(expenses[page - 1]);
-    return color == null ? black : photoTint(color);
+    final color = page == 0
+        ? camera.value
+        : page <= expenses.length
+        ? colors.of(expenses[page - 1])
+        : null;
+    return color == null
+        ? (top: TachColors.night, bottom: TachColors.night)
+        : photoTint(color);
   }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([pages, colors]),
+      listenable: Listenable.merge([pages, colors, camera]),
       builder: (context, _) {
         final position = pages.hasClients && pages.position.haveDimensions
             ? pages.page ?? 0.0
@@ -94,8 +107,11 @@ class FeedBackground extends StatelessWidget {
         // Lấy luôn màu của trang kế tiếp để nó có sẵn trước khi người dùng vuốt.
         final to = _tintOf(page + 1);
         final t = position - page;
-        return DecoratedBox(
+        // Chuyển màu trong một nhịp ngắn để nền không giật khi vừa đọc xong màu
+        // của một ảnh; ở camera thì chậm hơn vì màu hình đang ngắm đổi liên tục.
+        return AnimatedContainer(
           key: const ValueKey('feed-background'),
+          duration: Duration(milliseconds: position == 0 ? 600 : 220),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,

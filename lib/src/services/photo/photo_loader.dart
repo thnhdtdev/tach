@@ -9,12 +9,18 @@ const remotePhotoPrefix = 'remote:';
 abstract interface class PhotoLoader {
   Future<Uint8List?> load(String path);
 
+  /// Ảnh đã có sẵn trong bộ nhớ, để hiện ngay mà không nháy ô trống.
+  Uint8List? cached(String path);
+
   void remember(String path, Uint8List bytes);
 }
 
 class NoPhotoLoader implements PhotoLoader {
   @override
   Future<Uint8List?> load(String path) async => null;
+
+  @override
+  Uint8List? cached(String path) => null;
 
   @override
   void remember(String path, Uint8List bytes) {}
@@ -41,6 +47,9 @@ class SupabasePhotoLoader implements PhotoLoader {
     }
     return _loading[path] ??= _download(path);
   }
+
+  @override
+  Uint8List? cached(String path) => _cache[path];
 
   Future<Uint8List?> _download(String path) async {
     try {

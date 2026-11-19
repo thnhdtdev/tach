@@ -21,6 +21,9 @@ class SampleGroupRepository implements GroupRepository {
   // Thay đổi chỉ sống trong bộ nhớ của app nên các hàm ghi không làm gì.
 
   @override
+  Stream<void> watchGroups(Set<String> groupIds) => const Stream.empty();
+
+  @override
   Future<void> createGroup(Group group) async {}
 
   @override

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -199,8 +199,41 @@ class LedgerCubit extends Cubit<LedgerState> {
 
   @override
   Future<void> close() async {
+    _refreshTimer?.cancel();
+    await _groupChanges?.cancel();
     await _saveFailures.close();
     return super.close();
+  }
+
+  StreamSubscription<void>? _groupChanges;
+  var _watchedGroups = const <String>{};
+  var _watching = Future<void>.value();
+  Timer? _refreshTimer;
+
+  @override
+  void onChange(Change<LedgerState> change) {
+    super.onChange(change);
+    final ids = {
+      for (final ledger in change.nextState.ledgers) ledger.group.id,
+    };
+    if (!setEquals(ids, _watchedGroups)) _watch(ids);
+  }
+
+  void _watch(Set<String> groupIds) {
+    _watchedGroups = groupIds;
+    _watching = _watching.then((_) async {
+      // Nhóm vừa tạo phải ghi xong lên máy chủ thì mới được phép theo dõi.
+      await _writes;
+      await _groupChanges?.cancel();
+      _groupChanges = null;
+      final superseded = !setEquals(groupIds, _watchedGroups);
+      if (isClosed || superseded || groupIds.isEmpty) return;
+      _groupChanges = _repository.watchGroups(groupIds).listen((_) {
+        // Một thao tác có thể phát vài tín hiệu liền nhau; gom lại tải một lần.
+        _refreshTimer?.cancel();
+        _refreshTimer = Timer(const Duration(milliseconds: 400), refresh);
+      });
+    });
   }
 
   Future<void> load({String? openGroupId}) async {

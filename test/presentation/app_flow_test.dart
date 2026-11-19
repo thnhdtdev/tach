@@ -621,6 +621,41 @@ void main() {
     },
   );
 
+  testWidgets(
+    'đang xem một khoản mà có khoản mới chen lên đầu thì vẫn ở khoản đó',
+    (tester) async {
+      await _launch(tester);
+      await _signIn(tester);
+      final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+      final everyone = cubit.state.group.members.map((m) => m.id).toList();
+
+      await tester.tap(find.textContaining('vừa ghi'));
+      await tester.pumpAndSettle();
+      await tester.fling(find.byType(PageView), const Offset(0, -400), 2000);
+      await tester.pumpAndSettle();
+      expect(find.text('Tiền điện tháng 10'), findsOneWidget);
+
+      cubit.addExpense(amount: 12000, note: 'Hành', participantIds: everyone);
+      await tester.pumpAndSettle();
+      expect(find.text('Tiền điện tháng 10'), findsOneWidget);
+      expect(find.text('Hành'), findsNothing);
+
+      final last = cubit.state.expenses.length;
+      tester
+          .widget<PageView>(find.byType(PageView))
+          .controller!
+          .jumpToPage(last);
+      await tester.pumpAndSettle();
+      final lastNote = cubit.state.expenses.last.note;
+      expect(find.text(lastNote), findsOneWidget);
+
+      cubit.addExpense(amount: 8000, note: 'Tỏi', participantIds: everyone);
+      await tester.pumpAndSettle();
+      expect(find.text(lastNote), findsOneWidget);
+      expect(find.text('Tỏi'), findsNothing);
+    },
+  );
+
   testWidgets('vuốt từ phải sang trái ở camera và bảng tin thì mở hồ sơ', (
     tester,
   ) async {

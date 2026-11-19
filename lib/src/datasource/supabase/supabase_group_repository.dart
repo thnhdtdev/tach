@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -170,6 +171,45 @@ class SupabaseGroupRepository implements GroupRepository {
           ),
       ],
     );
+  }
+
+  @override
+  Stream<void> watchGroups(Set<String> groupIds) {
+    final channels = <RealtimeChannel>[];
+    late final StreamController<void> changes;
+    void changed() {
+      if (!changes.isClosed) changes.add(null);
+    }
+
+    changes = StreamController<void>(
+      onListen: () {
+        for (final id in groupIds) {
+          var joinedBefore = false;
+          channels.add(
+            _client
+                .channel(
+                  'group:$id',
+                  opts: const RealtimeChannelConfig(private: true),
+                )
+                .onBroadcast(event: 'changed', callback: (_) => changed())
+                .subscribe((status, _) {
+                  if (status != RealtimeSubscribeStatus.subscribed) return;
+                  // Nối lại sau khi rớt mạng: tín hiệu phát trong lúc mất kết
+                  // nối đã lỡ, nên coi như nhóm vừa đổi.
+                  if (joinedBefore) changed();
+                  joinedBefore = true;
+                }),
+          );
+        }
+      },
+      onCancel: () async {
+        for (final channel in channels) {
+          await _client.removeChannel(channel);
+        }
+        await changes.close();
+      },
+    );
+    return changes.stream;
   }
 
   @override

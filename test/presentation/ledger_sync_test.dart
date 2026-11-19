@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -50,6 +51,29 @@ class _FakeServer implements GroupRepository {
 
   @override
   bool get persists => true;
+
+  /// Các nhóm đang được theo dõi; rỗng khi không ai nghe.
+  var watched = <String>{};
+  final _changes = StreamController<void>.broadcast();
+
+  void changeFromSomeoneElse() => _changes.add(null);
+
+  @override
+  Stream<void> watchGroups(Set<String> groupIds) {
+    late final StreamController<void> forwarded;
+    StreamSubscription<void>? source;
+    forwarded = StreamController<void>(
+      onListen: () {
+        watched = groupIds;
+        source = _changes.stream.listen(forwarded.add);
+      },
+      onCancel: () async {
+        watched = {};
+        await source?.cancel();
+      },
+    );
+    return forwarded.stream;
+  }
 
   @override
   Future<LedgerSnapshot> load() async {
@@ -275,6 +299,50 @@ void main() {
       expect(server.groups['g-1']!.expenses, isEmpty);
     },
   );
+
+  test('người khác ghi khoản chi: tự tải lại, vài tín hiệu liền nhau chỉ tải một lần', () async {
+    await settle();
+    expect(server.watched, {'g-1'});
+    final loadsBefore = server.loads;
+
+    final group = server.groups['g-1']!;
+    server.groups['g-1'] = GroupSnapshot(
+      group: group.group,
+      expenses: [
+        Expense(
+          id: 'e-minh',
+          payerId: 'u-minh',
+          amount: 30000,
+          note: 'Trứng',
+          splits: const {'u-an': 15000, 'u-minh': 15000},
+          createdAt: DateTime(2026, 11, 19),
+        ),
+      ],
+    );
+    server
+      ..changeFromSomeoneElse()
+      ..changeFromSomeoneElse()
+      ..changeFromSomeoneElse();
+    expect(cubit.state.expenses, isEmpty);
+
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    expect(cubit.state.expenses.single.note, 'Trứng');
+    expect(cubit.state.myNet, -15000);
+    expect(server.loads, loadsBefore + 1);
+  });
+
+  test('vào thêm nhóm thì theo dõi cả nhóm mới, đăng xuất thì ngừng', () async {
+    await settle();
+    expect(server.watched, {'g-1'});
+
+    await cubit.joinGroup('DL2026');
+    await settle();
+    expect(server.watched, {'g-1', 'g-2'});
+
+    cubit.reset();
+    await settle();
+    expect(server.watched, isEmpty);
+  });
 
   test('rời nhóm và xóa nhóm gọi đúng hàm trên máy chủ', () async {
     expect(cubit.leaveGroup(), isTrue);

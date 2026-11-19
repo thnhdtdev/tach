@@ -33,6 +33,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _photoColors = PhotoColors();
   final _cameraColor = ValueNotifier<Color?>(null);
   StreamSubscription<void>? _saveFailures;
+  StreamSubscription<LedgerState>? _ledgerChanges;
+
+  /// Khoản chi đang xem ở bảng tin; `null` khi đang ở camera.
+  String? _shownExpenseId;
   var _onFeed = false;
   var _capturing = false;
 
@@ -42,6 +46,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _ledgerChanges = context.read<LedgerCubit>().stream.listen(
+      _keepShownExpense,
+    );
     _saveFailures = context.read<LedgerCubit>().saveFailures.listen((_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -67,10 +74,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _saveFailures?.cancel();
+    _ledgerChanges?.cancel();
     _pages.dispose();
     _photoColors.dispose();
     _cameraColor.dispose();
     super.dispose();
+  }
+
+  /// Người khác ghi hoặc xóa khoản chi làm thứ tự trang dịch đi; nhảy theo để
+  /// khoản đang xem không bị đổi dưới tay người dùng.
+  void _keepShownExpense(LedgerState state) {
+    final shown = _shownExpenseId;
+    if (shown == null || !_pages.hasClients) return;
+    final index = state.expenses.indexWhere((e) => e.id == shown);
+    final page = _pages.page?.round() ?? 0;
+    if (index < 0) {
+      // Khoản đang xem vừa bị xóa: trang này giờ là khoản kế tiếp.
+      final next = page - 1;
+      _shownExpenseId = next >= 0 && next < state.expenses.length
+          ? state.expenses[next].id
+          : null;
+    } else if (index + 1 != page) {
+      _pages.jumpToPage(index + 1);
+    }
+  }
+
+  void _onPageChanged(int page) {
+    final expenses = context.read<LedgerCubit>().state.expenses;
+    _shownExpenseId = page > 0 && page <= expenses.length
+        ? expenses[page - 1].id
+        : null;
+    setState(() => _onFeed = page > 0);
   }
 
   void _goToPage(int page) {
@@ -200,8 +234,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   ? const NeverScrollableScrollPhysics()
                                   : null,
                               itemCount: state.expenses.length + 1,
-                              onPageChanged: (page) =>
-                                  setState(() => _onFeed = page > 0),
+                              onPageChanged: _onPageChanged,
                               itemBuilder: (context, page) {
                                 if (page == 0) {
                                   return CapturePage(

@@ -131,13 +131,16 @@ class _RemotePhotoState extends State<_RemotePhoto> {
   Widget build(BuildContext context) {
     return FutureBuilder(
       future: _bytes,
+      initialData: getIt<PhotoLoader>().cached(widget.path),
       builder: (context, snapshot) {
+        final bytes = snapshot.data;
+        if (bytes != null) {
+          return ExpensePhoto(photoUrl: null, photoBytes: bytes);
+        }
         if (snapshot.connectionState != ConnectionState.done) {
           return const ColoredBox(color: TachColors.nightRaised);
         }
-        final bytes = snapshot.data;
-        if (bytes == null) return const _NoPhoto();
-        return ExpensePhoto(photoUrl: null, photoBytes: bytes);
+        return const _NoPhoto();
       },
     );
   }

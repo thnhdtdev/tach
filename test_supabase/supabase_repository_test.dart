@@ -49,6 +49,14 @@ class _User {
   String get id => client.auth.currentUser!.id;
 }
 
+Future<void> _until(bool Function() done) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 10));
+  while (!done()) {
+    if (DateTime.now().isAfter(deadline)) fail('Chờ quá 10 giây');
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+  }
+}
+
 void main() {
   final configured = SupabaseConfig.isConfigured;
 
@@ -110,7 +118,33 @@ void main() {
         splits: {an.id: 15000, minh.id: 15000},
         createdAt: DateTime.now(),
       );
+      var minhSignals = 0;
+      var outsiderSignals = 0;
+      final watches = [
+        minh.repository.watchGroups({group.id}).listen((_) => minhSignals++),
+        outsider.repository
+            .watchGroups({group.id})
+            .listen((_) => outsiderSignals++),
+      ];
+      // Kênh công khai cùng tên cũng không được nhận tín hiệu của kênh riêng.
+      final eavesdropper = await _User.signUp('Nghe lén');
+      var eavesdropped = 0;
+      eavesdropper.client
+          .channel('group:${group.id}')
+          .onBroadcast(event: 'changed', callback: (_) => eavesdropped++)
+          .subscribe();
+      addTearDown(() async {
+        for (final watch in watches) {
+          await watch.cancel();
+        }
+        await eavesdropper.client.dispose();
+      });
+      // Chờ hai kênh nối xong rồi mới ghi, để tín hiệu không phát trước khi nghe.
+      await Future<void>.delayed(const Duration(seconds: 2));
+
       await an.repository.addExpense(group.id, expense);
+      await _until(() => minhSignals > 0);
+      expect(outsiderSignals, 0);
 
       var theirs = await minh.repository.load();
       final seen = theirs.groups.single.expenses.single;
@@ -182,6 +216,12 @@ void main() {
       expect(theirs.groups.single.expenses.single.id, expense.id);
       expect(await SupabasePhotoLoader(minh.client).load(mistakePhoto), isNull);
       await an.repository.deleteExpense(group.id, mistake.id);
+
+      minhSignals = 0;
+      await an.repository.saveProfile(Member(id: an.id, name: 'An'));
+      await _until(() => minhSignals > 0);
+      expect(outsiderSignals, 0);
+      expect(eavesdropped, 0);
 
       await minh.repository.setReaction(expense.id, '👍');
       await minh.repository.setReaction(expense.id, '😂');

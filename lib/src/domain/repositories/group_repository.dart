@@ -33,6 +33,10 @@ abstract interface class GroupRepository {
 
   Future<void> createGroup(Group group);
 
+  /// Phát một sự kiện mỗi khi một trong các nhóm này đổi trên máy chủ, do bất
+  /// kỳ ai. Hủy đăng ký nghe để ngừng theo dõi.
+  Stream<void> watchGroups(Set<String> groupIds);
+
   /// Trả về id nhóm, hoặc `null` nếu không có nhóm nào dùng mã này.
   Future<String?> joinGroup(String inviteCode);
 

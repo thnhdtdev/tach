@@ -1,4 +1,3 @@
-/// Thời gian tương đối bằng tiếng Việt: "12 phút trước", "Hôm qua", "07/11".
 String timeAgo(DateTime time, {DateTime? now}) {
   final current = now ?? DateTime.now();
   final diff = current.difference(time);

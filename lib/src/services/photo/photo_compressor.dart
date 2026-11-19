@@ -4,10 +4,6 @@ import 'dart:ui' as ui;
 
 import 'package:image/image.dart' as img;
 
-/// Cắt ảnh thành hình vuông ở giữa, thu về [side] điểm ảnh mỗi cạnh rồi nén
-/// JPEG. Ảnh từ camera nặng cỡ 1 MB; sau bước này còn khoảng 150–250 KB.
-///
-/// Ném [Exception] nếu dữ liệu không phải ảnh đọc được.
 Future<Uint8List> squareJpeg(
   Uint8List bytes, {
   int side = 1080,
@@ -16,7 +12,6 @@ Future<Uint8List> squareJpeg(
   final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
   final descriptor = await ui.ImageDescriptor.encoded(buffer);
 
-  // Giải mã thẳng ở cỡ nhỏ: cạnh ngắn vừa bằng [side], không phóng to ảnh nhỏ.
   final shortest = descriptor.width < descriptor.height
       ? descriptor.width
       : descriptor.height;
@@ -29,7 +24,6 @@ Future<Uint8List> squareJpeg(
   final frame = await codec.getNextFrame();
   final decoded = frame.image;
 
-  // Vẽ phần vuông ở giữa sang ảnh mới.
   final recorder = ui.PictureRecorder();
   ui.Canvas(recorder).drawImageRect(
     decoded,

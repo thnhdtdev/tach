@@ -45,7 +45,6 @@ final _pillButton = ButtonStyle(
   ),
 );
 
-/// Theme sáng cho các màn sổ sách: lưới tháng, số dư, đăng nhập.
 final tachLightTheme = ThemeData(
   brightness: Brightness.light,
   fontFamily: _family,
@@ -112,7 +111,6 @@ final tachLightTheme = ThemeData(
   ),
 );
 
-/// Theme tối cho camera và bảng tin, nơi ảnh là nội dung chính.
 final tachNightTheme = ThemeData(
   brightness: Brightness.dark,
   fontFamily: _family,

@@ -9,7 +9,6 @@ import '../../domain/entities/expense.dart';
 import '../ledger/ledger_cubit.dart';
 import '../widgets/member_avatar.dart';
 
-/// Bình luận của một khoản chi. Cả nhóm cùng thấy, trả lời theo luồng.
 class CommentsSheet extends StatefulWidget {
   const CommentsSheet({super.key, required this.expenseId});
 
@@ -23,7 +22,6 @@ class _CommentsSheetState extends State<CommentsSheet> {
   final _input = TextEditingController();
   final _focus = FocusNode();
 
-  /// Bình luận gốc đang được trả lời, nếu có.
   Comment? _replyTo;
 
   @override
@@ -70,7 +68,6 @@ class _CommentsSheetState extends State<CommentsSheet> {
     );
   }
 
-  /// Phần nền mờ tối thiểu còn lại phía trên bảng khi bàn phím mở.
   static const _scrimAbove = 28.0;
   static const _minHeight = 220.0;
 
@@ -81,7 +78,6 @@ class _CommentsSheetState extends State<CommentsSheet> {
         expense.comments.where((c) => c.parentId == root.id).toList()
           ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
-    // Chạm vào chỗ trống trong bảng thì cất bàn phím.
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onTap: _focus.unfocus,
@@ -124,7 +120,6 @@ class _CommentsSheetState extends State<CommentsSheet> {
                     ),
                   )
                 : ListView(
-                    // Kéo danh sách cũng cất bàn phím.
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),

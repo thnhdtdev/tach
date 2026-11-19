@@ -7,8 +7,6 @@ import 'package:tach/src/domain/entities/settlement.dart';
 import 'package:tach/src/domain/repositories/group_repository.dart';
 import 'package:tach/src/presentation/ledger/ledger_cubit.dart';
 
-/// Máy chủ giả: ghi lại thứ tự các lần gọi, giữ dữ liệu như một nơi lưu thật,
-/// và có thể giả mất mạng.
 class _FakeServer implements GroupRepository {
   static const me = Member(id: 'u-an', name: 'An');
   static const minh = Member(id: 'u-minh', name: 'Minh');
@@ -17,7 +15,6 @@ class _FakeServer implements GroupRepository {
   var offline = false;
   var loads = 0;
 
-  /// Nhóm đang có trên máy chủ, theo id.
   final groups = <String, GroupSnapshot>{
     'g-1': const GroupSnapshot(
       group: Group(
@@ -32,7 +29,6 @@ class _FakeServer implements GroupRepository {
     ),
   };
 
-  /// Nhóm người khác tạo, vào được bằng mã mời.
   static const _friends = GroupSnapshot(
     group: Group(
       id: 'g-2',
@@ -139,7 +135,6 @@ void main() {
 
   tearDown(() => cubit.close());
 
-  /// Chờ mọi lần ghi và tải lại đang xếp hàng chạy xong.
   Future<void> settle() => pumpEventQueue();
 
   test('mỗi thay đổi hiện ngay rồi ghi lên máy chủ theo đúng thứ tự', () async {
@@ -154,7 +149,6 @@ void main() {
       ..renameGroup('Trọ 12A')
       ..renameMe('An Nguyễn');
 
-    // Giao diện đã đổi trước khi máy chủ trả lời.
     expect(cubit.state.expenses.single.comments.single.text, 'Rẻ ghê');
     expect(cubit.state.group.name, 'Trọ 12A');
     expect(server.calls, isEmpty);
@@ -208,7 +202,6 @@ void main() {
     cubit.renameGroup('Trọ 12A');
     await settle();
     await cubit.refresh();
-    // Khoản chưa lưu được không còn; tên nhóm lần này đã lưu.
     expect(cubit.state.expenses, isEmpty);
     expect(server.calls, ['renameGroup Trọ 12A']);
   });
@@ -232,7 +225,6 @@ void main() {
     expect(await cubit.joinGroup('abcdef'), JoinGroupResult.notFound);
     expect(cubit.state.groups, hasLength(1));
 
-    // Mã gõ thường, thừa khoảng trắng vẫn nhận.
     expect(await cubit.joinGroup(' dl2026 '), JoinGroupResult.joined);
     expect(cubit.state.groups.map((g) => g.name), ['Trọ 12', 'Đà Lạt']);
     expect(cubit.state.group.name, 'Đà Lạt');

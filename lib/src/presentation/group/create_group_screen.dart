@@ -8,7 +8,6 @@ import '../ledger/ledger_cubit.dart';
 import 'group_invite_screen.dart';
 import 'group_type_ui.dart';
 
-/// Tạo nhóm mới: chọn loại nhóm, đặt tên, rồi sang màn mời bạn.
 class CreateGroupScreen extends StatefulWidget {
   const CreateGroupScreen({super.key});
 

@@ -10,9 +10,6 @@ import '../../services/vietqr/vietqr_payload.dart';
 import '../ledger/ledger_cubit.dart';
 import '../widgets/info_line.dart';
 
-/// Bảng trượt lên để trả một khoản bằng VietQR.
-///
-/// App chỉ tạo mã; người dùng tự chuyển trong app ngân hàng rồi báo đã chuyển.
 class VietQrSheet extends StatefulWidget {
   const VietQrSheet({super.key, required this.transfer});
 

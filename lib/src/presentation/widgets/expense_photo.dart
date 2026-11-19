@@ -6,11 +6,6 @@ import '../../core/theme/app_colors.dart';
 import '../../dependency/injection.dart';
 import '../../services/photo/photo_loader.dart';
 
-/// Ảnh của một khoản chi, lấp đầy khung chứa nó.
-///
-/// Ưu tiên ảnh vừa chụp ([photoBytes]), rồi tới ảnh trên máy chủ
-/// (`remote:<đường dẫn>`) hoặc ảnh mẫu (`sample:<tên>`), cuối cùng là ô thay thế
-/// cho khoản không có ảnh.
 class ExpensePhoto extends StatelessWidget {
   const ExpensePhoto({super.key, required this.photoUrl, this.photoBytes});
 
@@ -107,8 +102,6 @@ class ExpensePhoto extends StatelessWidget {
   }
 }
 
-/// Ảnh nằm trong kho ảnh trên máy chủ: tải về rồi hiện, trong lúc chờ là một
-/// ô màu tối.
 class _RemotePhoto extends StatefulWidget {
   const _RemotePhoto({required this.path});
 
@@ -170,7 +163,6 @@ class _SamplePainter extends CustomPainter {
           colors: [sample.light, sample.dark],
         ).createShader(rect),
     );
-    // Hai mảng sáng tối mờ để nền bớt phẳng, gợi ánh sáng trong ảnh chụp.
     canvas.drawCircle(
       Offset(size.width * 0.22, size.height * 0.2),
       size.shortestSide * 0.5,

@@ -1,6 +1,5 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Một dòng "nhãn: giá trị", ví dụ "Ngân hàng: Techcombank".
 class InfoLine extends StatelessWidget {
   const InfoLine({super.key, required this.label, required this.value});
 

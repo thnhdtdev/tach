@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-/// Tài khoản ngân hàng để nhận tiền qua VietQR.
 class BankAccount {
   const BankAccount({
     required this.bin,
@@ -9,7 +8,6 @@ class BankAccount {
     required this.holderName,
   });
 
-  /// Mã BIN 6 số của ngân hàng theo NAPAS.
   final String bin;
   final String bankName;
   final String accountNumber;
@@ -28,8 +26,6 @@ class Member {
   final String name;
   final BankAccount? bank;
 
-  /// Ảnh đại diện đã chọn, giữ trong bộ nhớ. Khi có nơi lưu ảnh trên máy chủ
-  /// thì trường này sẽ thay bằng đường dẫn ảnh.
   final Uint8List? avatarBytes;
 
   Member copyWith({String? name}) => Member(
@@ -39,16 +35,13 @@ class Member {
     avatarBytes: avatarBytes,
   );
 
-  /// Đặt lại tài khoản nhận tiền; truyền `null` để gỡ tài khoản.
   Member withBank(BankAccount? bank) =>
       Member(id: id, name: name, bank: bank, avatarBytes: avatarBytes);
 
-  /// Đặt lại ảnh đại diện; truyền `null` để gỡ ảnh.
   Member withAvatar(Uint8List? bytes) =>
       Member(id: id, name: name, bank: bank, avatarBytes: bytes);
 }
 
-/// Nhóm dùng để làm gì. Quyết định gợi ý tên và cách gọi trong giao diện.
 enum GroupType { room, trip, family }
 
 class Group {
@@ -73,10 +66,8 @@ class Group {
   /// Mã gửi cho người khác để họ vào nhóm.
   final String inviteCode;
 
-  /// Id người tạo nhóm. Chỉ người này được xóa nhóm.
   final String createdBy;
 
-  /// Người đang ở trong nhóm.
   final List<Member> members;
 
   /// Người đã rời nhóm, giữ lại để các khoản cũ còn hiện tên họ.

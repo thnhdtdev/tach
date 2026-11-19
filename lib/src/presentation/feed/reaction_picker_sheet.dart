@@ -5,8 +5,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
 
-/// Bảng chọn cảm xúc từ toàn bộ bộ emoji, chia theo nhóm.
-///
 /// Thư viện `emoji_picker_flutter` lo dữ liệu: danh sách emoji, mục dùng gần
 /// đây và việc lọc emoji mà máy không hiển thị được. Phần giao diện tự dựng,
 /// vì giao diện có sẵn của thư viện dùng bộ Material cũ, không ghép được với
@@ -21,7 +19,6 @@ class ReactionPickerSheet extends StatelessWidget {
 
   static const _gridHeight = 320.0;
 
-  /// Cảm xúc người dùng đang thả ở khoản chi này, nếu có.
   final String? current;
   final ValueChanged<String> onPick;
   final VoidCallback onRemove;
@@ -66,7 +63,6 @@ class ReactionPickerSheet extends StatelessWidget {
   }
 }
 
-/// Hàng nhóm emoji ở trên và lưới emoji của nhóm đang chọn ở dưới.
 class _EmojiBrowser extends StatefulWidget {
   const _EmojiBrowser({required this.state, required this.current});
 
@@ -104,7 +100,6 @@ class _EmojiBrowserState extends State<_EmojiBrowser> {
     picker.Category.FLAGS: 'Cờ',
   };
 
-  /// Bỏ các nhóm trống, ví dụ "Dùng gần đây" khi chưa chọn emoji nào.
   late final List<picker.CategoryEmoji> _groups = [
     for (final group in widget.state.categoryEmoji)
       if (group.emoji.isNotEmpty) group,

@@ -8,7 +8,6 @@ import 'src/dependency/injection.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Chưa cấu hình Supabase thì chạy bằng dữ liệu mẫu trong bộ nhớ.
   SupabaseClient? supabase;
   if (SupabaseConfig.isConfigured) {
     await Supabase.initialize(

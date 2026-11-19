@@ -12,23 +12,18 @@ import '../widgets/member_avatar.dart';
 import 'comments_sheet.dart';
 import 'reaction_picker_sheet.dart';
 
-/// Một khoản chi chiếm trọn màn hình trong bảng tin.
 class ExpensePage extends StatelessWidget {
   const ExpensePage({super.key, required this.expense, required this.state});
 
-  /// Ba cảm xúc bấm nhanh; muốn cảm xúc khác thì mở bảng emoji đầy đủ.
   static const quickReactions = ['👍', '😂', '🙏'];
 
-  /// Số cảm xúc khác nhau hiện cạnh dòng tóm tắt; nhiều hơn thì gộp thành +N.
   static const _maxReactionKinds = 3;
 
-  /// Chừa chỗ cho thanh điều hướng nổi ở đáy bảng tin.
   static const bottomBarSpace = 84.0;
 
   final Expense expense;
   final LedgerState state;
 
-  /// Dòng tóm tắt phần của người đang xem, ví dụ "Bạn nợ 7.500đ".
   ({String main, String detail}) _myPart() {
     final sharers = expense.splits.length;
     final detail = 'chia $sharers';
@@ -65,7 +60,6 @@ class ExpensePage extends StatelessWidget {
     );
   }
 
-  /// Mở bảng emoji đầy đủ để thả một cảm xúc bất kỳ.
   void _openReactionPicker(BuildContext context) {
     final cubit = context.read<LedgerCubit>();
     showModalBottomSheet<void>(
@@ -94,7 +88,6 @@ class ExpensePage extends StatelessWidget {
     final part = _myPart();
     final myReaction = expense.reactions[state.meId];
 
-    // Cảm xúc của mình nếu nó không nằm trong ba cái bấm nhanh.
     final otherReaction =
         myReaction != null && !quickReactions.contains(myReaction)
         ? myReaction
@@ -112,8 +105,6 @@ class ExpensePage extends StatelessWidget {
 
     return SafeArea(
       child: Column(
-        // Cả cụm (người trả, ảnh vuông, phần của bạn, bình luận) nằm giữa
-        // màn hình thay vì dồn lên trên.
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -145,7 +136,6 @@ class ExpensePage extends StatelessWidget {
           Flexible(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              // Ảnh vuông như lúc chụp; máy thấp thì thu nhỏ, vẫn giữ 1:1.
               child: Align(
                 heightFactor: 1,
                 child: AspectRatio(
@@ -321,8 +311,6 @@ class ExpensePage extends StatelessWidget {
                               ? TachColors.mint.withValues(alpha: 0.35)
                               : null,
                         ),
-                        // Đã thả một cảm xúc ngoài ba cái bấm nhanh thì hiện
-                        // chính nó ở đây; chạm để đổi hoặc gỡ.
                         child: otherReaction != null
                             ? Text(
                                 otherReaction,

@@ -11,7 +11,6 @@ import 'package:tach/src/domain/repositories/group_repository.dart';
 import 'package:tach/src/services/auth/auth_service.dart';
 import 'package:tach/src/services/camera/capture_camera.dart';
 
-/// Đăng nhập như khi nối máy chủ: chỉ có tài khoản khách, phiên được giữ lại.
 class _GuestAuth implements AuthService {
   _GuestAuth({this.signedIn = false});
 
@@ -36,7 +35,6 @@ class _GuestAuth implements AuthService {
   Future<void> signOut() async => signedIn = false;
 }
 
-/// Máy chủ giả cho một tài khoản mới: chưa có tên, chưa ở nhóm nào.
 class _NewAccountServer extends SampleGroupRepository {
   var name = '';
   var offline = false;
@@ -140,7 +138,6 @@ void main() {
       await tester.pumpWidget(const TachApp());
       await tester.pumpAndSettle();
 
-      // Nối máy chủ thì chỉ hiện cách đăng nhập đang dùng được.
       expect(find.text('Tiếp tục với Google'), findsNothing);
       await tester.tap(find.text('Bắt đầu dùng thử'));
       await tester.pumpAndSettle();

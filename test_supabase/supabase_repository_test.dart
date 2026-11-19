@@ -71,7 +71,6 @@ void main() {
       expect(mine.me.name, 'An');
       expect(mine.groups, isEmpty);
 
-      // An tạo nhóm, Minh vào bằng mã mời.
       final invite = newUuid()
           .replaceAll('-', '')
           .substring(0, 6)
@@ -89,7 +88,6 @@ void main() {
 
       expect(await minh.repository.joinGroup('ZZZZZZ'), isNull);
       expect(await minh.repository.joinGroup(invite), group.id);
-      // Vào lại bằng mã cũ không tạo thành viên trùng.
       expect(await minh.repository.joinGroup(invite), group.id);
 
       mine = await an.repository.load();
@@ -101,7 +99,6 @@ void main() {
         'Minh',
       ]);
 
-      // An ghi một khoản có ảnh; ảnh được cắt vuông, nén rồi tải lên.
       final photo = File('assets/images/onboarding/hotpot.jpg')
           .readAsBytesSync();
       final expense = Expense(
@@ -135,7 +132,6 @@ void main() {
       expect(downloaded.length, lessThan(photo.length));
       expect(await outsider.photos.load(path), isNull);
 
-      // Chia không khớp tổng thì máy chủ từ chối.
       await expectLater(
         an.repository.addExpense(
           group.id,
@@ -151,7 +147,6 @@ void main() {
         throwsA(isA<PostgrestException>()),
       );
 
-      // Minh thả cảm xúc, đổi cảm xúc, bình luận và trả lời.
       await minh.repository.setReaction(expense.id, '👍');
       await minh.repository.setReaction(expense.id, '😂');
       final root = Comment(
@@ -183,7 +178,6 @@ void main() {
       loaded = mine.groups.single.expenses.single;
       expect(loaded.reactions, isEmpty);
 
-      // Hồ sơ: tài khoản nhận tiền và ảnh đại diện của An hiện ở máy Minh.
       await an.repository.saveProfile(
         Member(
           id: an.id,
@@ -207,7 +201,6 @@ void main() {
       mine = await an.repository.load();
       expect(mine.me.avatarBytes, isNull);
 
-      // Còn nợ thì Minh chưa rời nhóm được, An chưa xóa nhóm được.
       await expectLater(
         minh.repository.leaveGroup(group.id),
         throwsA(isA<PostgrestException>()),
@@ -217,7 +210,6 @@ void main() {
         throwsA(isA<PostgrestException>()),
       );
 
-      // Minh báo đã chuyển, An xác nhận.
       final settlement = Settlement(
         id: newUuid(),
         fromId: minh.id,
@@ -228,7 +220,6 @@ void main() {
         createdAt: DateTime.now(),
       );
       await minh.repository.addSettlement(group.id, settlement);
-      // Chỉ người nhận mới xác nhận được.
       await expectLater(
         minh.repository.confirmSettlement(settlement.id),
         throwsA(isA<PostgrestException>()),
@@ -240,11 +231,9 @@ void main() {
         SettlementStatus.confirmed,
       );
 
-      // Đổi tên nhóm; người ngoài không thấy nhóm.
       await minh.repository.renameGroup(group.id, 'Trọ 12A');
       expect((await outsider.repository.load()).groups, isEmpty);
 
-      // Minh rời nhóm: nhóm biến mất ở máy Minh, An vẫn thấy tên Minh ở khoản cũ.
       await minh.repository.leaveGroup(group.id);
       expect((await minh.repository.load()).groups, isEmpty);
       mine = await an.repository.load();

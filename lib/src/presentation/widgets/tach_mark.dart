@@ -2,9 +2,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
 
-/// Dấu hiệu tạm của Tach: ống kính máy ảnh bị tách đôi.
-///
-/// Logo chính thức chưa chốt; thay widget này khi có.
 class TachMark extends StatelessWidget {
   const TachMark({super.key, this.size = 72, this.color = TachColors.mint});
 

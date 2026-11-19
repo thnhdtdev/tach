@@ -8,62 +8,42 @@ enum CameraStatus {
   /// Đang mở, hoặc đang tạm nghỉ khi màn camera bị che.
   starting,
 
-  /// Đã có hình xem trực tiếp, chụp được.
   ready,
 
-  /// Người dùng chưa cho phép app dùng camera.
   denied,
 
-  /// Máy không có camera (ví dụ trình giả lập) hoặc camera không mở được.
   unavailable,
 }
 
-/// Camera của màn chụp khoản chi.
 abstract interface class CaptureCamera {
-  /// Mở camera đang chọn (mặc định là camera sau). Gọi lại được sau [close].
   Future<CameraStatus> open();
 
-  /// Máy có cả camera trước và sau để đổi qua lại không. Biết được sau [open].
   bool get canFlip;
 
-  /// Đang dùng camera trước (camera quay về phía người cầm máy).
   bool get isFront;
 
-  /// Đổi giữa camera trước và sau rồi mở camera mới.
   Future<CameraStatus> flip();
 
-  /// Hình xem trực tiếp, lấp đầy khung chứa. Chỉ dùng khi đã [CameraStatus.ready].
   Widget preview();
 
-  /// Chụp một tấm và trả về dữ liệu ảnh JPEG.
   Future<Uint8List> takePhoto();
 
-  /// Bật hoặc tắt đèn flash khi chụp. Trả về `false` nếu máy không hỗ trợ.
+  /// Trả về `false` nếu camera không có đèn flash.
   Future<bool> setFlash(bool on);
 
-  /// Mức zoom nhỏ nhất của mặt camera đang dùng: 0,5 nếu có ống kính góc siêu
-  /// rộng, không thì 1. Biết được sau [open].
   double get minZoom;
 
-  /// Mức zoom lớn nhất; bằng [minZoom] nếu camera không zoom được.
   double get maxZoom;
 
-  /// Mức zoom camera đang thật sự dùng. Camera vừa mở luôn ở 1×.
   double get zoom;
 
-  /// Đặt mức zoom, từ [minZoom] đến [maxZoom]. Qua mốc 1× camera tự đổi giữa
-  /// ống kính chính và ống kính góc siêu rộng, nên hình xem trực tiếp có thể
-  /// tắt một nhịp và [preview] cần được vẽ lại sau khi hàm này xong.
-  ///
-  /// Trả về trạng thái camera sau đó; khác [CameraStatus.ready] nếu ống kính
-  /// mới không mở được hoặc camera đã bị đóng giữa chừng.
+  /// Qua mốc 1× camera tự đổi ống kính, nên [preview] cần được vẽ lại sau khi
+  /// hàm này xong.
   Future<CameraStatus> setZoom(double level);
 
-  /// Nhả camera để app khác dùng và đỡ tốn pin.
   Future<void> close();
 }
 
-/// Camera thật, dùng plugin `camera`.
 class PluginCaptureCamera implements CaptureCamera {
   /// Camera cho zoom số tới vài chục lần, nhưng quá mức này ảnh vỡ hạt, không
   /// còn đọc được hóa đơn.
@@ -76,7 +56,6 @@ class PluginCaptureCamera implements CaptureCamera {
   var _ultraWide = false;
   var _flashOn = false;
 
-  /// Mức zoom lớn nhất của ống kính chính.
   var _maxZoom = 1.0;
   var _zoom = 1.0;
 
@@ -110,8 +89,6 @@ class PluginCaptureCamera implements CaptureCamera {
     return _openLens();
   }
 
-  /// Mở ống kính chính hoặc ống kính góc siêu rộng (theo [_ultraWide]) của
-  /// mặt camera đang chọn.
   Future<CameraStatus> _openLens() async {
     await close();
     final closesBefore = _closes;
@@ -124,7 +101,6 @@ class PluginCaptureCamera implements CaptureCamera {
       _canFlip =
           has(CameraLensDirection.back) && has(CameraLensDirection.front);
 
-      // Máy chỉ có một camera thì dùng camera đó, dù hướng nào.
       if (!has(_lens)) _lens = cameras.first.lensDirection;
       final sameSide = [
         for (final c in cameras)
@@ -140,10 +116,8 @@ class PluginCaptureCamera implements CaptureCamera {
       _hasUltraWide = ultraWide != null && ultraWide != main;
       if (!_hasUltraWide) _ultraWide = false;
       final chosen = _ultraWide ? ultraWide! : main;
-      // 1080p: ảnh vuông cắt ra được 1080 điểm ảnh mỗi cạnh, vừa khít khung ảnh
-      // trên màn hình điện thoại. Mức 720p thấp hơn làm ảnh bị kéo giãn và mờ;
-      // mức cao hơn làm hình xem trực tiếp nặng máy mà mắt không thấy khác.
-      // Tắt âm thanh để không phải xin quyền micro; app chỉ chụp ảnh.
+      // 720p làm ảnh vuông bị kéo giãn và mờ; cao hơn 1080p thì khung ngắm nặng
+      // máy. Tắt âm thanh để khỏi xin quyền micro.
       final controller = CameraController(
         chosen,
         ResolutionPreset.veryHigh,
@@ -151,7 +125,6 @@ class PluginCaptureCamera implements CaptureCamera {
       );
       await controller.initialize();
       if (_closes != closesBefore) {
-        // Màn chụp đã bị che trong lúc mở; không giữ camera chạy ngầm.
         await controller.dispose();
         return CameraStatus.starting;
       }
@@ -179,7 +152,6 @@ class PluginCaptureCamera implements CaptureCamera {
     }
   }
 
-  /// Giao diện app là dọc, nên giữ ảnh chụp dọc dù người dùng xoay máy.
   Future<void> _lockPortrait(CameraController controller) async {
     try {
       await controller.lockCaptureOrientation(DeviceOrientation.portraitUp);
@@ -188,13 +160,11 @@ class PluginCaptureCamera implements CaptureCamera {
     }
   }
 
-  /// Mức zoom lớn nhất của ống kính chính, chặn ở [_zoomCap].
   Future<double> _readMaxZoom(CameraController controller) async {
     try {
       final max = await controller.getMaxZoomLevel();
       return max.clamp(1.0, _zoomCap).toDouble();
     } on Exception {
-      // Không đọc được thì coi như ống kính không zoom được.
       return 1;
     }
   }
@@ -251,7 +221,6 @@ class PluginCaptureCamera implements CaptureCamera {
   Future<Uint8List> takePhoto() async {
     final controller = _controller;
     if (controller == null) {
-      // Ví dụ bấm chụp đúng lúc camera đang đổi ống kính.
       throw CameraException('cameraNotReady', 'Camera chưa mở');
     }
     final file = await controller.takePicture();
@@ -264,7 +233,6 @@ class PluginCaptureCamera implements CaptureCamera {
     if (controller == null) return false;
     try {
       await controller.setFlashMode(on ? FlashMode.always : FlashMode.off);
-      // Nhớ lại để bật tiếp khi camera đổi sang ống kính khác.
       _flashOn = on;
       return true;
     } on CameraException {

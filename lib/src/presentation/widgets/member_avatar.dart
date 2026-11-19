@@ -4,8 +4,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
 
-/// Avatar tròn: ảnh đại diện nếu có, nếu không thì chữ cái đầu của tên trên
-/// nền màu riêng từng người.
 class MemberAvatar extends StatelessWidget {
   const MemberAvatar({
     super.key,
@@ -49,7 +47,6 @@ class MemberAvatar extends StatelessWidget {
         fit: BoxFit.cover,
         gaplessPlayback: true,
         semanticLabel: 'Ảnh đại diện của $name',
-        // Ảnh hỏng thì quay về chữ cái đầu thay vì để ô trống.
         errorBuilder: (_, _, _) => initial,
       ),
     );

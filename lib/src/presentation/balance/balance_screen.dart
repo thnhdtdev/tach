@@ -12,7 +12,6 @@ import '../widgets/member_avatar.dart';
 import '../widgets/section_title.dart';
 import 'vietqr_sheet.dart';
 
-/// Số dư: bạn cần trả ai bao nhiêu sau khi đã gộp nợ chéo.
 class BalanceScreen extends StatelessWidget {
   const BalanceScreen({super.key});
 

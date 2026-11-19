@@ -1,6 +1,5 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Tiêu đề một nhóm nội dung trên các màn nền sáng, kèm đường kẻ bên dưới.
 class SectionTitle extends StatelessWidget {
   const SectionTitle(this.title, {super.key});
 

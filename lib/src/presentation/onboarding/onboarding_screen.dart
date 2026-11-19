@@ -4,7 +4,6 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../core/theme/app_colors.dart';
 import '../widgets/member_avatar.dart';
 
-/// Ba màn giới thiệu, chỉ hiện ở lần mở app đầu tiên.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key, required this.onDone});
 
@@ -98,12 +97,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       children: [
                         Expanded(
                           child: Center(
-                            // Hình minh họa; nội dung đã có ở tiêu đề và mô tả.
                             child: ExcludeSemantics(
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Padding(
-                                  // Chừa chỗ cho bóng đổ dưới ô ảnh.
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 24,
                                   ),
@@ -174,8 +171,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-/// Ô ảnh vuông bo góc lớn, góc dưới bên trái có avatar người ghi và một nhãn
-/// chú thích, theo kiểu ô ảnh trên màn hình chính của điện thoại.
 class _PhotoTile extends StatelessWidget {
   const _PhotoTile({
     required this.size,
@@ -188,14 +183,11 @@ class _PhotoTile extends StatelessWidget {
 
   final double size;
 
-  /// Tên người ghi khoản, dùng cho avatar.
   final String owner;
   final Color tone;
 
-  /// Phần chữ thường của nhãn, đứng trước [strong]. Bỏ trống nếu không cần.
   final String? label;
 
-  /// Phần chữ đậm của nhãn, thường là số tiền.
   final String strong;
 
   final Widget child;
@@ -280,7 +272,6 @@ class _PhotoTile extends StatelessWidget {
   }
 }
 
-/// Ảnh minh họa trong `assets/images/onboarding/`, lấp đầy ô chứa nó.
 class _Photo extends StatelessWidget {
   const _Photo(this.name);
 
@@ -298,7 +289,6 @@ class _Photo extends StatelessWidget {
   }
 }
 
-/// Một tấm ảnh vừa chụp, kèm người ghi và số tiền.
 class _CaptureArt extends StatelessWidget {
   const _CaptureArt();
 
@@ -315,7 +305,6 @@ class _CaptureArt extends StatelessWidget {
   }
 }
 
-/// Bữa lẩu 320.000đ được tách cho bốn người.
 class _SplitArt extends StatelessWidget {
   const _SplitArt();
 
@@ -365,7 +354,6 @@ class _SplitArt extends StatelessWidget {
   }
 }
 
-/// Mã QR đúng số tiền, đúng người nhận, và trạng thái "Đã trả".
 class _PayArt extends StatelessWidget {
   const _PayArt();
 
@@ -380,8 +368,6 @@ class _PayArt extends StatelessWidget {
           tone: TachColors.avatarTones[2],
           label: 'Trả Lan',
           strong: '266.000đ',
-          // Nền mint nhạt để ô còn rõ hình trên màn trắng; mã QR nằm trên thẻ
-          // trắng, phía trên hàng avatar và nhãn.
           child: ColoredBox(
             color: TachColors.mintWash,
             child: Align(

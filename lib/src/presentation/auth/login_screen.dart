@@ -6,7 +6,6 @@ import '../../services/auth/auth_service.dart';
 import '../group/join_group_sheet.dart';
 import '../widgets/tach_mark.dart';
 
-/// Màn đăng nhập. Chỉ hiện những cách đăng nhập mà [AuthService] đang hỗ trợ.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.onSignedIn});
 
@@ -19,7 +18,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _auth = getIt<AuthService>();
 
-  /// Cách đăng nhập đang chạy; khóa các nút cho tới khi xong.
   SignInMethod? _busy;
   String? _error;
 
@@ -44,7 +42,6 @@ class _LoginScreenState extends State<LoginScreen> {
     widget.onSignedIn();
   }
 
-  /// Người có mã mời: tạo tài khoản (nếu chưa có) rồi vào thẳng nhóm.
   Future<void> _enterInviteCode() async {
     final joined = await showJoinGroupSheet(
       context,

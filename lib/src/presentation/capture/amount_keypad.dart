@@ -2,7 +2,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
 
-/// Bàn phím số to để gõ số tiền bằng một tay.
 class AmountKeypad extends StatelessWidget {
   const AmountKeypad({super.key, required this.onKey});
 

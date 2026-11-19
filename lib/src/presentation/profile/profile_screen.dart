@@ -15,7 +15,6 @@ import '../widgets/section_title.dart';
 import 'bank_account_sheet.dart';
 import 'name_edit_sheet.dart';
 
-/// Hồ sơ của người dùng: tên, tài khoản nhận tiền, nhóm đang ở và đăng xuất.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key, required this.onSignOut});
 
@@ -68,7 +67,6 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
-  /// Báo vì sao chưa làm được việc vừa bấm, kèm lối sang màn số dư.
   Future<void> _explainBlocked(
     BuildContext context, {
     required String title,
@@ -97,7 +95,6 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
-  /// Xóa nhóm đang mở với mọi thành viên. Chỉ người tạo nhóm thấy nút này.
   Future<void> _deleteGroup(BuildContext context) async {
     final cubit = context.read<LedgerCubit>();
     final state = cubit.state;
@@ -146,7 +143,6 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
-  /// Rời nhóm đang mở. Còn khoản chưa sòng phẳng thì chỉ báo lý do.
   Future<void> _leaveGroup(BuildContext context) async {
     final cubit = context.read<LedgerCubit>();
     final state = cubit.state;
@@ -190,7 +186,6 @@ class ProfileScreen extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
 
     if (cubit.leaveGroup()) {
-      // Nhóm đang mở đã đổi; quay về màn chính của nhóm còn lại.
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
@@ -384,7 +379,6 @@ class ProfileScreen extends StatelessWidget {
 
 enum _AvatarAction { gallery, camera, remove }
 
-/// Avatar có huy hiệu máy ảnh, chạm để đổi ảnh đại diện.
 class _EditableAvatar extends StatelessWidget {
   const _EditableAvatar({required this.onTap, required this.child});
 

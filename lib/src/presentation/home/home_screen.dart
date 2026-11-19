@@ -18,8 +18,6 @@ import '../profile/profile_screen.dart';
 import '../widgets/member_avatar.dart';
 import '../widgets/tach_mark.dart';
 
-/// Màn chính: camera ở trên cùng, vuốt lên là bảng tin, mỗi màn một khoản chi.
-/// Vuốt từ phải sang trái để mở hồ sơ.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.onSignOut});
 
@@ -35,7 +33,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   var _onFeed = false;
   var _capturing = false;
 
-  /// Quãng đã kéo ngang trong lần vuốt hiện tại; âm là kéo sang trái.
   var _swipeDx = 0.0;
 
   @override
@@ -58,7 +55,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Quay lại app thì lấy các khoản người khác vừa ghi.
     if (state == AppLifecycleState.resumed) {
       context.read<LedgerCubit>().refresh();
     }
@@ -95,7 +91,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         .push(MaterialPageRoute<void>(builder: (_) => const BalanceScreen()));
   }
 
-  /// Mở bảng nhóm: chuyển sang nhóm khác hoặc tạo nhóm mới.
   Future<void> _openGroups() async {
     final cubit = context.read<LedgerCubit>();
     final result = await showModalBottomSheet<GroupsSheetResult>(
@@ -122,7 +117,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       case null:
         return;
     }
-    // Nhóm đã đổi thì bảng tin cũng đổi; quay về camera của nhóm mới.
     if (mounted && _pages.hasClients) _pages.jumpToPage(0);
   }
 
@@ -139,8 +133,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// Vuốt từ phải sang trái ở màn chính thì mở hồ sơ: kéo đủ xa rồi thả, hoặc
-  /// hất nhanh sang trái. Kéo sang trái rồi kéo ngược lại thì thôi.
   void _onSwipeEnd(DragEndDetails details) {
     final velocity = details.primaryVelocity ?? 0;
     final draggedFar = _swipeDx < -72 && velocity <= 0;
@@ -239,7 +231,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 }
 
-/// Màn chính khi người dùng chưa ở nhóm nào: mời tạo nhóm đầu tiên.
 class _NoGroupView extends StatelessWidget {
   const _NoGroupView({
     required this.state,
@@ -328,7 +319,6 @@ class _NoGroupView extends StatelessWidget {
   }
 }
 
-/// Màn chính khi lần tải đầu tiên không thành công.
 class _LoadFailedView extends StatelessWidget {
   const _LoadFailedView({required this.onRetry, required this.onSignOut});
 
@@ -382,7 +372,6 @@ class _LoadFailedView extends StatelessWidget {
   }
 }
 
-/// Thanh dưới của bảng tin: lưới cả tháng, về camera, số dư.
 class _FeedBar extends StatelessWidget {
   const _FeedBar({
     required this.onMonth,

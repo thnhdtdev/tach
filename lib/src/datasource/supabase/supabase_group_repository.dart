@@ -11,16 +11,12 @@ import '../../services/photo/photo_loader.dart';
 
 typedef _Row = Map<String, dynamic>;
 
-/// Dữ liệu nhóm lưu trên Supabase. Bảng, hàm và quy tắc phân quyền nằm trong
-/// `supabase/migrations/`.
 class SupabaseGroupRepository implements GroupRepository {
   SupabaseGroupRepository(this._client, this._photos);
 
   static const _profileColumns =
       'id, name, avatar_path, bank_bin, bank_name, bank_account, bank_holder';
 
-  /// Mỗi nhóm kèm thành viên, khoản chi (với phần chia, cảm xúc, bình luận)
-  /// và các lần trả nợ, lấy trong một lần gọi.
   static const _groupColumns =
       'id, name, code, type, invite_code, created_by, '
       'group_members(user_id, joined_at, left_at, profiles($_profileColumns)), '
@@ -33,7 +29,6 @@ class SupabaseGroupRepository implements GroupRepository {
   final SupabaseClient _client;
   final PhotoLoader _photos;
 
-  /// Ảnh đại diện đã tải, theo đường dẫn trong kho `avatars`.
   final _avatars = <String, Uint8List>{};
 
   String get _userId {
@@ -56,7 +51,6 @@ class SupabaseGroupRepository implements GroupRepository {
     final groups = results[1];
     if (profiles.isEmpty) throw const AuthException('Không tìm thấy hồ sơ');
 
-    // Tải ảnh đại diện của mọi người một lượt trước khi dựng dữ liệu.
     final avatarPaths = <String>{
       ?profiles.first['avatar_path'] as String?,
       for (final group in groups)

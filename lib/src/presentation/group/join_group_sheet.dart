@@ -6,8 +6,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../ledger/ledger_cubit.dart';
 
-/// Mở bảng nhập mã mời. Trả về `true` khi đã vào được nhóm.
-///
 /// [beforeJoin] chạy trước khi gửi mã, dùng ở màn đăng nhập để tạo tài khoản
 /// cho người chưa đăng nhập; nó ném ngoại lệ thì bảng báo không kết nối được.
 Future<bool> showJoinGroupSheet(

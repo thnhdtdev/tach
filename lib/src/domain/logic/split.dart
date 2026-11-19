@@ -1,5 +1,3 @@
-/// Chia đều [amount] cho [participantIds].
-///
 /// Khi không chia hết, phần dư (vài đồng) tính cho người trả nếu người đó có
 /// tham gia chia, nếu không thì tính cho người đầu tiên trong danh sách. Tổng
 /// các phần luôn đúng bằng [amount].

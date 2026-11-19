@@ -1,8 +1,3 @@
-/// Tạo chuỗi mã VietQR (chuẩn EMVCo của NAPAS) để chuyển khoản tới tài khoản.
-///
-/// App chỉ tạo mã để người dùng tự chuyển trong app ngân hàng, không giữ tiền.
-library;
-
 String _field(String id, String value) =>
     '$id${value.length.toString().padLeft(2, '0')}$value';
 
@@ -19,8 +14,6 @@ int crc16(String text) {
   return crc;
 }
 
-/// Chuỗi để vẽ thành mã QR chuyển [amount] đồng tới [accountNumber] tại ngân
-/// hàng có mã [bankBin], kèm nội dung chuyển khoản [content] (không dấu).
 String buildVietQrPayload({
   required String bankBin,
   required String accountNumber,

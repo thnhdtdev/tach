@@ -10,9 +10,6 @@ import '../widgets/expense_photo.dart';
 
 enum _Filter { all, mine, commented }
 
-/// Lưới ảnh các khoản chi trong tháng. Chạm một ô để mở khoản đó ở bảng tin.
-///
-/// Hiện hiển thị mọi khoản đã tải; khi có máy chủ sẽ tải theo từng tháng.
 class MonthGridScreen extends StatefulWidget {
   const MonthGridScreen({super.key});
 

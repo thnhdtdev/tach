@@ -13,7 +13,6 @@ class TachApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      // Dữ liệu được tải sau khi đăng nhập, xem LaunchGate.
       create: (_) => LedgerCubit(getIt<GroupRepository>()),
       child: MaterialApp(
         title: 'Tach',

@@ -1,12 +1,5 @@
-enum SettlementStatus {
-  /// Người nợ báo đã chuyển, chờ người nhận xác nhận.
-  pending,
+enum SettlementStatus { pending, confirmed }
 
-  /// Người nhận đã xác nhận nhận tiền.
-  confirmed,
-}
-
-/// Một lần trả nợ giữa hai thành viên.
 class Settlement {
   const Settlement({
     required this.id,
@@ -39,7 +32,6 @@ class Settlement {
   }
 }
 
-/// Một lần chuyển khoản được đề xuất sau khi gộp nợ chéo.
 class Transfer {
   const Transfer({
     required this.fromId,

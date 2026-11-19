@@ -6,9 +6,6 @@ import '../../domain/entities/settlement.dart';
 import '../../domain/logic/split.dart';
 import '../../domain/repositories/group_repository.dart';
 
-/// Dữ liệu mẫu trong bộ nhớ để dựng giao diện khi chưa nối Supabase.
-///
-/// Số tài khoản ngân hàng ở đây là giả, không dùng để chuyển tiền thật.
 class SampleGroupRepository implements GroupRepository {
   static const _me = 'u-an';
   static const _minh = 'u-minh';
@@ -26,7 +23,6 @@ class SampleGroupRepository implements GroupRepository {
   @override
   Future<void> createGroup(Group group) async {}
 
-  /// Bản mẫu coi mọi mã mời là mã của nhóm mẫu.
   @override
   Future<String?> joinGroup(String inviteCode) async => _groupId;
 

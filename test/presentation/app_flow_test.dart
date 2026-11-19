@@ -15,7 +15,6 @@ import 'package:tach/src/presentation/home/home_screen.dart';
 import 'package:tach/src/presentation/ledger/ledger_cubit.dart';
 import 'package:tach/src/presentation/widgets/expense_photo.dart';
 
-/// Ảnh PNG 1×1 hợp lệ, dùng thay cho ảnh người dùng chọn.
 final _tinyPng = base64Decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA'
   '60e6kgAAAABJRU5ErkJggg==',
@@ -34,7 +33,6 @@ class _FakeAvatarPicker implements AvatarPicker {
   }
 }
 
-/// Camera giả: không đụng tới phần cứng, ghi lại các lần mở và nhả.
 class _FakeCamera implements CaptureCamera {
   _FakeCamera(this.status);
 
@@ -48,10 +46,8 @@ class _FakeCamera implements CaptureCamera {
   var twoLenses = true;
   var topZoom = 6.0;
 
-  /// Các mức zoom camera đã thật sự đặt, theo thứ tự.
   final zooms = <double>[];
 
-  /// Máy có thêm ống kính góc siêu rộng ở camera sau.
   var ultraWideLens = false;
   var ultraWide = false;
   var currentZoom = 1.0;
@@ -75,7 +71,6 @@ class _FakeCamera implements CaptureCamera {
       onUltraWide: ultraWide,
       maxZoom: topZoom,
     );
-    // Đổi ống kính là mở lại camera.
     if (plan.ultraWide != ultraWide) {
       ultraWide = plan.ultraWide;
       opens++;
@@ -94,7 +89,6 @@ class _FakeCamera implements CaptureCamera {
   @override
   Future<CameraStatus> flip() async {
     front = !front;
-    // Camera trước của máy giả không có đèn flash.
     hasFlash = !front;
     return open();
   }
@@ -334,8 +328,6 @@ void main() {
       final field = tester.widget<TextField>(find.byType(TextField));
       expect(field.focusNode!.hasFocus, isTrue);
 
-      // Tiêu đề và nút đóng nằm hẳn dưới thanh trạng thái, ô nhập nằm trên
-      // bàn phím.
       expect(
         tester.getTopLeft(find.text('Bình luận')).dy,
         greaterThan(statusBar),
@@ -558,7 +550,6 @@ void main() {
     await _signIn(tester);
     final preview = find.byKey(const ValueKey('live-preview'));
 
-    // Vuốt ngược chiều, hoặc nhích nhẹ rồi thả, thì không mở.
     await tester.drag(preview, const Offset(200, 0));
     await tester.pumpAndSettle();
     await tester.drag(preview, const Offset(-40, 0));
@@ -576,7 +567,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Minh'), findsOneWidget);
 
-    // Hất nhanh một quãng ngắn cũng tính.
     await tester.fling(find.text('30.000đ'), const Offset(-60, 0), 1500);
     await tester.pumpAndSettle();
     expect(find.text('Thành viên Trọ 12'), findsOneWidget);
@@ -739,7 +729,6 @@ void main() {
     await tester.tap(find.byTooltip('Hồ sơ'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Xóa nhóm'), 200);
-    // Nút nằm cuối trang; cuộn cho nó vào hẳn màn hình rồi mới bấm.
     await tester.ensureVisible(find.text('Xóa nhóm'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Xóa nhóm'));
@@ -767,7 +756,6 @@ void main() {
       await tester.tap(find.byTooltip('Hồ sơ'));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.text('Xóa nhóm'), 200);
-      // Nút nằm cuối trang; cuộn cho nó vào hẳn màn hình rồi mới bấm.
       await tester.ensureVisible(find.text('Xóa nhóm'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Xóa nhóm'));
@@ -1082,7 +1070,6 @@ void main() {
         await tester.pump();
         expect(find.byKey(const ValueKey('key-0')), findsOneWidget);
 
-        // Chọn ô ghi chú: bàn phím chữ của máy (cao 336) trượt lên.
         await tester.tap(find.byType(TextField));
         tester.view.viewInsets = const FakeViewPadding(bottom: 336 * 3);
         await tester.pumpAndSettle();
@@ -1096,7 +1083,6 @@ void main() {
         await tester.enterText(find.byType(TextField), 'Thêm màn hình');
         await tester.pump();
 
-        // Bấm xong trên bàn phím: bàn phím số quay lại, số tiền và ghi chú còn.
         await tester.testTextInput.receiveAction(TextInputAction.done);
         tester.view.viewInsets = FakeViewPadding.zero;
         await tester.pumpAndSettle();
@@ -1104,7 +1090,6 @@ void main() {
         expect(find.bySemanticsLabel('Số tiền 50.000đ'), findsOneWidget);
         expect(find.text('Thêm màn hình'), findsOneWidget);
 
-        // Chạm vào ảnh cũng cất bàn phím chữ.
         await tester.tap(find.byType(TextField));
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('key-0')), findsNothing);
@@ -1141,7 +1126,6 @@ void main() {
       await _launch(tester);
       await _signIn(tester);
 
-      // Nút nằm ở góc trên bên phải khung ngắm.
       final frame = tester.getRect(find.byKey(const ValueKey('live-preview')));
       final button = tester.getCenter(find.bySemanticsLabel('Zoom 1×'));
       expect(button.dx, greaterThan(frame.center.dx + frame.width / 4));
@@ -1159,7 +1143,6 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Đổi sang camera trước'));
       await tester.pumpAndSettle();
-      // Camera mới mở ở mức 1, nút phải quay về 1×.
       expect(find.bySemanticsLabel('Zoom 1×'), findsOneWidget);
       expect(_camera.zooms, [2.0, 1.0, 2.0]);
     });
@@ -1196,12 +1179,10 @@ void main() {
         expect(_camera.zooms.last, 6.0);
         expect(find.bySemanticsLabel('Zoom 6×'), findsOneWidget);
 
-        // Chụm lại sát nhau: về 1×, không xuống thấp hơn.
         await second.moveBy(const Offset(0, -330));
         await tester.pump();
         expect(_camera.zooms.last, 1.0);
 
-        // Đang ở mức lẻ do chụm tay thì bấm nút là về 1×.
         await second.moveBy(const Offset(0, 30));
         await tester.pump();
         await first.up();
@@ -1236,7 +1217,6 @@ void main() {
         expect(_camera.zooms, [2.0]);
         expect(_camera.opens, opens);
 
-        // 0,5× là một ống kính khác nên camera được mở lại.
         await tester.tap(find.bySemanticsLabel('Zoom 2×'));
         await tester.pumpAndSettle();
         expect(_camera.ultraWide, isTrue);
@@ -1388,7 +1368,6 @@ void main() {
       expect(after.width, moreOrLessEquals(before.width * 2, epsilon: 0.5));
       expect(_camera.zooms, isEmpty);
 
-      // Ảnh mẫu cũng có mức 0,5× để thử đủ vòng của nút zoom.
       await tester.tap(find.bySemanticsLabel('Zoom 2×'));
       await tester.pumpAndSettle();
       expect(find.bySemanticsLabel('Zoom 0,5×'), findsOneWidget);

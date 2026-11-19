@@ -5,9 +5,6 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/theme/app_colors.dart';
 import '../ledger/ledger_cubit.dart';
 
-/// Màn mời bạn vào nhóm bằng mã mời.
-///
-/// Link mời mở thẳng app sẽ thêm sau khi chốt tên miền; hiện chỉ có mã.
 class GroupInviteScreen extends StatefulWidget {
   const GroupInviteScreen({
     super.key,
@@ -17,7 +14,6 @@ class GroupInviteScreen extends StatefulWidget {
 
   final String groupId;
 
-  /// `true` khi vừa tạo nhóm xong, để đổi lời chào đầu màn.
   final bool justCreated;
 
   @override

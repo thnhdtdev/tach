@@ -3,11 +3,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
 
-/// Hỏi tên người dùng ở lần đầu vào app, để cả nhóm biết ai ghi khoản nào.
 class NameSetupScreen extends StatefulWidget {
   const NameSetupScreen({super.key, required this.onSubmit});
 
-  /// Nhận tên đã bỏ khoảng trắng thừa, không bao giờ trống.
   final ValueChanged<String> onSubmit;
 
   @override

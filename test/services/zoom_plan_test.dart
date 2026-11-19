@@ -42,18 +42,14 @@ void main() {
   });
 
   test('quanh 1× có khoảng đệm để không đổi ống kính liên tục', () {
-    // Đang ở ống kính chính: thu nhỏ nhẹ thì vẫn ở lại, giữ 1×.
     final staying = plan(0.95);
     expect(staying.ultraWide, isFalse);
     expect(staying.zoom, 1.0);
-    // Thu nhỏ qua ngưỡng mới sang góc siêu rộng.
     expect(plan(0.9).ultraWide, isTrue);
 
-    // Đang ở góc siêu rộng: phóng tới sát 1× vẫn ở lại.
     final wide = plan(0.95, onUltraWide: true);
     expect(wide.ultraWide, isTrue);
     expect(wide.lensZoom, moreOrLessEquals(1.9));
-    // Chạm 1× thì về ống kính chính.
     expect(plan(1.0, onUltraWide: true).ultraWide, isFalse);
   });
 

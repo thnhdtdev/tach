@@ -270,7 +270,6 @@ void main() {
       final mine = solo.createGroup(name: 'Nhà mình', type: GroupType.family);
       expect(solo.state.canDeleteGroup, isTrue);
 
-      // Một mình trong nhóm thì ghi bao nhiêu cũng không ai nợ ai.
       solo.addExpense(amount: 50000, note: 'Rau', participantIds: ['u-an']);
       expect(solo.state.canDeleteGroup, isTrue);
       expect(solo.state.group.id, mine.id);
@@ -312,7 +311,6 @@ void main() {
   });
 }
 
-/// Người dùng chỉ ở một nhóm chưa có khoản chi nào, do người khác tạo.
 /// Nhóm hai người chưa có khoản chi nào, do Minh tạo. Kế thừa bản mẫu để dùng
 /// lại các hàm ghi không làm gì.
 class _SoloGroupRepository extends SampleGroupRepository {

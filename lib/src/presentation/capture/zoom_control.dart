@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
 
-/// "1×", "1,4×": một chữ số thập phân, bỏ phần ",0".
 String formatZoom(double zoom) {
   final tenths = (zoom * 10).round();
   final whole = tenths ~/ 10;
@@ -11,7 +10,6 @@ String formatZoom(double zoom) {
   return rest == 0 ? '$whole×' : '$whole,$rest×';
 }
 
-/// Bắt thao tác chụm hai ngón tay trên khung ngắm.
 class PinchZoomDetector extends StatelessWidget {
   const PinchZoomDetector({
     super.key,
@@ -23,10 +21,8 @@ class PinchZoomDetector extends StatelessWidget {
 
   final bool enabled;
 
-  /// Gọi mỗi khi bắt đầu một lần chụm, kể cả khi vừa đặt thêm ngón thứ hai.
   final VoidCallback onStart;
 
-  /// Tỉ lệ so với lúc bắt đầu chụm: lớn hơn 1 là hai ngón đang tách ra.
   final ValueChanged<double> onScale;
 
   final Widget child;
@@ -66,8 +62,6 @@ class _PinchRecognizer extends ScaleGestureRecognizer {
   }
 }
 
-/// Nút zoom ở góc khung ngắm: hiện mức zoom hiện tại, kể cả mức lẻ do chụm hai
-/// ngón tay. Bấm để chuyển sang mức kế tiếp.
 class ZoomButton extends StatelessWidget {
   const ZoomButton({super.key, required this.zoom, required this.onPressed});
 

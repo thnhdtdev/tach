@@ -5,8 +5,6 @@ import '../../core/theme/app_colors.dart';
 import '../ledger/ledger_cubit.dart';
 import 'group_type_ui.dart';
 
-/// Kết quả chọn trong bảng nhóm: mở một nhóm có sẵn, tạo nhóm mới, hoặc vào
-/// nhóm của người khác bằng mã mời.
 sealed class GroupsSheetResult {
   const GroupsSheetResult();
 }
@@ -25,8 +23,6 @@ class JoinWithCode extends GroupsSheetResult {
   const JoinWithCode();
 }
 
-/// Bảng liệt kê các nhóm đang tham gia để chuyển nhóm, tạo nhóm mới hoặc vào
-/// nhóm bằng mã mời.
 class GroupsSheet extends StatelessWidget {
   const GroupsSheet({super.key});
 

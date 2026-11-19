@@ -8,11 +8,9 @@ import '../../domain/entities/group.dart';
 import '../../services/vietqr/banks.dart';
 import '../ledger/ledger_cubit.dart';
 
-/// Bảng thêm hoặc sửa tài khoản ngân hàng nhận tiền.
 class BankAccountSheet extends StatefulWidget {
   const BankAccountSheet({super.key, this.current});
 
-  /// Tài khoản đang có; `null` khi thêm mới.
   final BankAccount? current;
 
   @override
@@ -28,7 +26,6 @@ class _BankAccountSheetState extends State<BankAccountSheet> {
   );
   late final _holder = TextEditingController(text: widget.current?.holderName);
 
-  /// Tên chủ tài khoản viết hoa không dấu, đúng như ngân hàng hiển thị.
   String get _holderName => removeDiacritics(_holder.text.trim()).toUpperCase();
 
   bool get _canSave =>

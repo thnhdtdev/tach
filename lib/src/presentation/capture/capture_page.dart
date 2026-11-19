@@ -18,10 +18,6 @@ import 'zoom_control.dart';
 
 enum _Stage { viewfinder, amount, people }
 
-/// Màn chính: camera, rồi gõ số tiền ngay trên ảnh, chọn người chia và gửi.
-///
-/// Camera chỉ chạy khi màn này đang hiện và app đang mở; bị màn khác che hoặc
-/// app xuống nền thì nhả camera.
 class CapturePage extends StatefulWidget {
   const CapturePage({
     super.key,
@@ -31,7 +27,6 @@ class CapturePage extends StatefulWidget {
     required this.onOpenGroups,
   });
 
-  /// Báo `true` khi đang ghi dở một khoản, để màn ngoài khóa thao tác vuốt.
   final ValueChanged<bool> onBusyChanged;
   final VoidCallback onOpenFeed;
   final VoidCallback onOpenProfile;
@@ -42,11 +37,8 @@ class CapturePage extends StatefulWidget {
 }
 
 class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
-  /// Số tiền tối đa 999.999.000đ.
   static const _maxDigits = 6;
 
-  /// Ảnh mẫu trên máy không có camera cũng zoom được từ 0,5× đến 6×, để thử
-  /// thao tác zoom.
   static const _sampleMinZoom = 0.5;
   static const _sampleMaxZoom = 6.0;
 
@@ -69,7 +61,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   var _excluded = <String>{};
   var _flashOn = false;
 
-  /// Mức zoom của khung ngắm; 1 là không zoom.
   var _zoom = 1.0;
   var _pinchStartZoom = 1.0;
   var _sendingZoom = false;
@@ -79,8 +70,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
 
   int get _amount => _digits.isEmpty ? 0 : int.parse(_digits) * 1000;
 
-  /// Máy không có camera (trình giả lập): bản debug cho chụp ảnh mẫu để vẫn
-  /// thử được cả luồng ghi khoản chi.
   bool get _useSamplePhoto =>
       kDebugMode && _cameraStatus == CameraStatus.unavailable;
 
@@ -111,8 +100,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Vẽ lại khi ô ghi chú được chọn hoặc thôi chọn, để đổi giữa bàn phím số
-    // của app và bàn phím chữ của máy.
     _noteFocus.addListener(_onNoteFocusChanged);
   }
 
@@ -123,7 +110,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Màn khác (hồ sơ, số dư, bảng chọn nhóm...) đang che thì nhả camera.
     _routeCurrent = ModalRoute.isCurrentOf(context) ?? true;
     _syncCamera();
   }
@@ -134,7 +120,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     _syncCamera();
   }
 
-  /// Mở hoặc nhả camera cho khớp với việc màn này có đang được nhìn thấy không.
   Future<void> _syncCamera() async {
     final wanted = _appResumed && _routeCurrent;
     if (!wanted) {
@@ -152,7 +137,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     await _openWith(_camera.open);
   }
 
-  /// Đổi giữa camera trước và sau.
   Future<void> _flipCamera() async {
     if (!_canFlip) return;
     setState(() {
@@ -162,8 +146,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     await _openWith(_camera.flip);
   }
 
-  /// Chạy một lần mở camera ([CaptureCamera.open] hoặc [CaptureCamera.flip])
-  /// rồi cập nhật giao diện theo kết quả.
   Future<void> _openWith(Future<CameraStatus> Function() action) async {
     _openingCamera = true;
     final status = await action();
@@ -175,7 +157,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       await _camera.close();
       return;
     }
-    // Camera vừa mở luôn ở 1×.
     setState(() {
       _cameraStatus = status;
       _zoom = 1;
@@ -216,7 +197,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     _setStage(_Stage.amount);
   }
 
-  /// Bấm nút chụp: chớp màn hình ngay, lấy ảnh rồi sang bước gõ số tiền.
   Future<void> _shoot() async {
     if (!_canShoot) return;
     if (_useSamplePhoto) {
@@ -266,7 +246,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     }
   }
 
-  /// Đặt mức zoom của khung ngắm, từ nút zoom hoặc từ thao tác chụm hai ngón.
   void _setZoom(double value) {
     final zoom = value.clamp(_minZoom, _maxZoom).toDouble();
     if (zoom == _zoom) return;
@@ -284,7 +263,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     while (mounted && _cameraStatus == CameraStatus.ready && sent != _zoom) {
       sent = _zoom;
       final status = await _camera.setZoom(sent);
-      // Màn này đã bị che hoặc camera đã đóng trong lúc chờ thì thôi.
       if (!mounted || _cameraStatus != CameraStatus.ready) break;
       // Vẽ lại vì hình xem trực tiếp có thể vừa chuyển sang ống kính khác.
       setState(() => _cameraStatus = status);
@@ -356,8 +334,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final cubit = context.read<LedgerCubit>();
     final state = context.watch<LedgerCubit>().state;
-    // Đang gõ ghi chú thì bàn phím chữ của máy đã chiếm nửa dưới màn hình; cất
-    // bàn phím số đi để khung ảnh không bị ép nhỏ.
     final typingNote = _noteFocus.hasFocus;
 
     return SafeArea(
@@ -367,8 +343,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              // Khung ảnh vuông. Khi bàn phím số chiếm chỗ trên máy nhỏ, khung
-              // tự thu lại nhưng vẫn giữ tỉ lệ 1:1.
               child: Center(
                 child: AspectRatio(
                   aspectRatio: 1,
@@ -390,7 +364,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                             _camera.preview()
                           else
                             Transform.scale(
-                              // Ảnh mẫu vừa khít khung ở mức nhỏ nhất.
                               scale: _useSamplePhoto
                                   ? _zoom / _sampleMinZoom
                                   : 1,
@@ -402,7 +375,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                             const _FocusBrackets(),
                             if (_cameraNotice() case final notice?)
                               _CameraNotice(notice: notice),
-                            // Nằm lọt trong góc ngắm trên bên phải.
                             if (_canZoom)
                               Positioned(
                                 top: 30,
@@ -462,7 +434,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     );
   }
 
-  /// Lời nhắn hiện trên khung ngắm khi chưa có hình từ camera.
   ({String title, String body})? _cameraNotice() {
     return switch (_cameraStatus) {
       CameraStatus.ready || CameraStatus.starting => null,
@@ -604,7 +575,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     }
   }
 
-  /// Số tiền và ghi chú hiện thẳng trên ảnh.
   Widget _amountOnPhoto(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final editing = _stage == _Stage.amount;
@@ -612,7 +582,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     final big = text.displayLarge!.copyWith(shadows: shadow);
     final dim = big.copyWith(color: Colors.white.withValues(alpha: 0.55));
 
-    // Chạm vào ảnh (ngoài ô ghi chú) thì cất bàn phím chữ, quay lại gõ số tiền.
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _noteFocus.unfocus,
@@ -866,11 +835,9 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   }
 }
 
-/// Nút chụp: vòng trắng, không dùng màu vàng.
 class _ShutterButton extends StatelessWidget {
   const _ShutterButton({required this.onPressed});
 
-  /// `null` khi chưa chụp được (camera chưa sẵn sàng hoặc chưa được cấp quyền).
   final VoidCallback? onPressed;
 
   @override
@@ -905,7 +872,6 @@ class _ShutterButton extends StatelessWidget {
   }
 }
 
-/// Lời nhắn giữa khung ngắm khi camera chưa dùng được.
 class _CameraNotice extends StatelessWidget {
   const _CameraNotice({required this.notice});
 
@@ -1058,7 +1024,6 @@ class _Toast extends StatelessWidget {
   }
 }
 
-/// Bốn góc ngắm của khung camera.
 class _FocusBrackets extends StatelessWidget {
   const _FocusBrackets();
 

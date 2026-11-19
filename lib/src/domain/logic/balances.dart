@@ -1,8 +1,6 @@
 import '../entities/expense.dart';
 import '../entities/settlement.dart';
 
-/// Số dư ròng của từng người: tổng đã trả trừ tổng phần phải chịu.
-///
 /// Số dương là được nhận, số âm là phải trả. Chỉ các lần trả nợ đã được xác
 /// nhận mới làm thay đổi số dư.
 Map<String, int> netBalances({
@@ -25,8 +23,6 @@ Map<String, int> netBalances({
   return net;
 }
 
-/// Gộp nợ chéo thành ít lần chuyển khoản.
-///
 /// Cách tham lam: mỗi vòng ghép người nợ nhiều nhất với người được nhận nhiều
 /// nhất và chuyển phần nhỏ hơn trong hai số. Kết quả có tối đa n − 1 lần
 /// chuyển. Khi bằng nhau thì xếp theo id để kết quả ổn định.

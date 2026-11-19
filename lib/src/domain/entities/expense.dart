@@ -14,7 +14,6 @@ class Comment {
   final String text;
   final DateTime createdAt;
 
-  /// Id bình luận gốc khi đây là một câu trả lời; `null` nếu là bình luận gốc.
   final String? parentId;
 }
 
@@ -35,25 +34,18 @@ class Expense {
   final String id;
   final String payerId;
 
-  /// Số tiền bằng đồng, luôn là số nguyên.
   final int amount;
   final String note;
 
-  /// Đường dẫn ảnh. `null` khi khoản không có ảnh, hoặc ảnh vừa chụp còn
-  /// nằm trong [photoBytes].
   final String? photoUrl;
 
-  /// Ảnh vừa chụp, giữ trong bộ nhớ cho tới khi có nơi tải lên máy chủ.
   final Uint8List? photoBytes;
 
-  /// `false` với khoản ghi không cần ảnh (tiền phòng, wifi...).
   bool get hasPhoto => photoUrl != null || photoBytes != null;
 
-  /// Phần mỗi người phải chịu, theo id thành viên. Tổng bằng [amount].
   final Map<String, int> splits;
   final DateTime createdAt;
 
-  /// Cảm xúc của từng người, theo id thành viên. Mỗi người một cảm xúc.
   final Map<String, String> reactions;
   final List<Comment> comments;
 

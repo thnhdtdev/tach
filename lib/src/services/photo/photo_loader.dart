@@ -6,16 +6,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// `remote:<id nhóm>/<id khoản chi>.jpg`.
 const remotePhotoPrefix = 'remote:';
 
-/// Tải ảnh khoản chi từ kho ảnh trên máy chủ.
 abstract interface class PhotoLoader {
-  /// Trả về dữ liệu ảnh, hoặc `null` nếu không tải được.
   Future<Uint8List?> load(String path);
 
-  /// Ghi sẵn ảnh vừa tải lên để khỏi phải tải về lại.
   void remember(String path, Uint8List bytes);
 }
 
-/// Bản dữ liệu mẫu không có kho ảnh.
 class NoPhotoLoader implements PhotoLoader {
   @override
   Future<Uint8List?> load(String path) async => null;
@@ -24,8 +20,6 @@ class NoPhotoLoader implements PhotoLoader {
   void remember(String path, Uint8List bytes) {}
 }
 
-/// Tải ảnh từ kho `photos` của Supabase, giữ lại các ảnh xem gần đây trong bộ
-/// nhớ để vuốt qua lại không phải tải lại.
 class SupabasePhotoLoader implements PhotoLoader {
   SupabasePhotoLoader(this._client);
 
@@ -42,7 +36,6 @@ class SupabasePhotoLoader implements PhotoLoader {
   Future<Uint8List?> load(String path) {
     final cached = _cache.remove(path);
     if (cached != null) {
-      // Đưa về cuối hàng: ảnh vừa xem là ảnh bị bỏ sau cùng.
       _cache[path] = cached;
       return Future.value(cached);
     }

@@ -1,7 +1,3 @@
-/// Định dạng tiền VND. Tiền luôn là số nguyên đồng.
-library;
-
-/// `30000` thành `30.000`.
 String formatThousands(int value) {
   final digits = value.abs().toString();
   final buffer = StringBuffer(value < 0 ? '-' : '');
@@ -12,10 +8,8 @@ String formatThousands(int value) {
   return buffer.toString();
 }
 
-/// `30000` thành `30.000đ`.
 String formatVnd(int amount) => '${formatThousands(amount)}đ';
 
-/// Dạng ngắn cho ô ảnh nhỏ: `30000` thành `30k`, `1200000` thành `1,2tr`.
 String formatShortVnd(int amount) {
   String scaled(int unit, String suffix) {
     final tenths = (amount * 10 / unit).round();

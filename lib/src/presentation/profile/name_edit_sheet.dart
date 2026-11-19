@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
 
-/// Bảng sửa một cái tên (tên người dùng, tên nhóm).
 class NameEditSheet extends StatefulWidget {
   const NameEditSheet({
     super.key,
@@ -21,7 +20,6 @@ class NameEditSheet extends StatefulWidget {
   final String hint;
   final int maxLength;
 
-  /// Nhận tên mới khi người dùng bấm lưu. Tên trống không được lưu.
   final ValueChanged<String> onSave;
 
   @override

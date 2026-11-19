@@ -13,9 +13,6 @@ import '../widgets/tach_mark.dart';
 
 enum _Step { loading, onboarding, login, home }
 
-/// Quyết định màn đầu tiên: giới thiệu (chỉ lần đầu), đăng nhập, rồi camera.
-///
-/// Còn phiên đăng nhập từ lần trước thì bỏ qua màn đăng nhập.
 class LaunchGate extends StatefulWidget {
   const LaunchGate({super.key});
 
@@ -57,7 +54,6 @@ class _LaunchGateState extends State<LaunchGate> {
     }
   }
 
-  /// Vào màn chính và tải dữ liệu của người vừa đăng nhập.
   void _enterHome() {
     setState(() => _step = _Step.home);
     context.read<LedgerCubit>().load();
@@ -88,7 +84,6 @@ class _LaunchGateState extends State<LaunchGate> {
           key: const ValueKey(_Step.login),
           onSignedIn: _enterHome,
         ),
-        // Tài khoản mới chưa có tên thì hỏi tên trước khi vào camera.
         _Step.home => BlocBuilder<LedgerCubit, LedgerState>(
           key: const ValueKey(_Step.home),
           buildWhen: (before, after) => before.needsName != after.needsName,

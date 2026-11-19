@@ -1,7 +1,5 @@
 import 'dart:math';
 
-/// Sinh id ngẫu nhiên dạng UUID phiên bản 4.
-///
 /// App tự sinh id cho nhóm, khoản chi, bình luận... để chúng hiện ngay trên máy
 /// rồi mới ghi lên máy chủ với đúng id đó.
 String newUuid([Random? random]) {

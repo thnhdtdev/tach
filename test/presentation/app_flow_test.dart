@@ -654,6 +654,73 @@ void main() {
     },
   );
 
+  testWidgets('thả cảm xúc từ bảng emoji đầy đủ, đổi rồi gỡ', (tester) async {
+    // Thư viện emoji hỏi máy Android xem emoji nào hiển thị được; trong test
+    // coi như máy hiển thị được hết.
+    const channel = MethodChannel('emoji_picker_flutter');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      call,
+    ) async {
+      final source = (call.arguments as Map)['source'] as List;
+      return List<bool>.filled(source.length, true);
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+
+    await _launch(tester);
+    await _signIn(tester);
+    final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+    String? mine() => cubit.state.expenses.first.reactions[cubit.state.meId];
+
+    await tester.tap(find.textContaining('vừa ghi'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Chọn cảm xúc khác'));
+    await tester.pumpAndSettle();
+    expect(find.text('Thả cảm xúc'), findsOneWidget);
+    expect(find.text('Gỡ cảm xúc'), findsNothing, reason: 'Chưa thả gì');
+    expect(find.byTooltip('Mặt cười và con người'), findsOneWidget);
+    expect(
+      find.byTooltip('Dùng gần đây'),
+      findsNothing,
+      reason: 'Chưa dùng emoji nào thì không có nhóm gần đây',
+    );
+
+    await tester.tap(find.byTooltip('Đồ ăn và thức uống'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('🍎'));
+    await tester.pumpAndSettle();
+    expect(mine(), '🍎');
+    expect(
+      find.text('Thả cảm xúc'),
+      findsNothing,
+      reason: 'Chọn xong thì đóng',
+    );
+    expect(
+      find.descendant(
+        of: find.byTooltip('Chọn cảm xúc khác'),
+        matching: find.text('🍎'),
+      ),
+      findsOneWidget,
+      reason: 'Cảm xúc vừa chọn hiện ở ô thứ tư',
+    );
+
+    await tester.tap(find.byTooltip('Chọn cảm xúc khác'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Dùng gần đây'), findsOneWidget);
+    await tester.tap(find.text('Gỡ cảm xúc'));
+    await tester.pumpAndSettle();
+    expect(mine(), isNull);
+
+    await tester.tap(find.bySemanticsLabel('Thả cảm xúc 👍'));
+    await tester.pump();
+    expect(mine(), '👍');
+  });
+
   group('camera', () {
     testWidgets('chụp ảnh thật: ảnh đi theo khoản chi lên bảng tin', (
       tester,

@@ -242,9 +242,16 @@ class LedgerCubit extends Cubit<LedgerState> {
 
   /// Thả cảm xúc; chạm lại đúng cảm xúc đang chọn thì gỡ.
   void toggleReaction(String expenseId, String emoji) {
+    final expense = state.expenses.firstWhere((e) => e.id == expenseId);
+    final current = expense.reactions[state.meId];
+    setReaction(expenseId, current == emoji ? null : emoji);
+  }
+
+  /// Đặt cảm xúc của người dùng cho một khoản chi; `null` để gỡ.
+  void setReaction(String expenseId, String? emoji) {
     _updateExpense(expenseId, (expense) {
       final reactions = {...expense.reactions};
-      if (reactions[state.meId] == emoji) {
+      if (emoji == null) {
         reactions.remove(state.meId);
       } else {
         reactions[state.meId] = emoji;

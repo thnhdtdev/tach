@@ -10,12 +10,17 @@ import '../ledger/ledger_cubit.dart';
 import '../widgets/expense_photo.dart';
 import '../widgets/member_avatar.dart';
 import 'comments_sheet.dart';
+import 'reaction_picker_sheet.dart';
 
 /// Một khoản chi chiếm trọn màn hình trong bảng tin.
 class ExpensePage extends StatelessWidget {
   const ExpensePage({super.key, required this.expense, required this.state});
 
+  /// Ba cảm xúc bấm nhanh; muốn cảm xúc khác thì mở bảng emoji đầy đủ.
   static const quickReactions = ['👍', '😂', '🙏'];
+
+  /// Số cảm xúc khác nhau hiện cạnh dòng tóm tắt; nhiều hơn thì gộp thành +N.
+  static const _maxReactionKinds = 3;
 
   /// Chừa chỗ cho thanh điều hướng nổi ở đáy bảng tin.
   static const bottomBarSpace = 84.0;
@@ -57,6 +62,28 @@ class ExpensePage extends StatelessWidget {
     );
   }
 
+  /// Mở bảng emoji đầy đủ để thả một cảm xúc bất kỳ.
+  void _openReactionPicker(BuildContext context) {
+    final cubit = context.read<LedgerCubit>();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: TachColors.nightRaised,
+      showDragHandle: true,
+      builder: (sheetContext) => ReactionPickerSheet(
+        current: expense.reactions[state.meId],
+        onPick: (emoji) {
+          cubit.setReaction(expense.id, emoji);
+          Navigator.of(sheetContext).pop();
+        },
+        onRemove: () {
+          cubit.setReaction(expense.id, null);
+          Navigator.of(sheetContext).pop();
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
@@ -64,10 +91,21 @@ class ExpensePage extends StatelessWidget {
     final part = _myPart();
     final myReaction = expense.reactions[state.meId];
 
+    // Cảm xúc của mình nếu nó không nằm trong ba cái bấm nhanh.
+    final otherReaction =
+        myReaction != null && !quickReactions.contains(myReaction)
+        ? myReaction
+        : null;
+
     final reactionCounts = <String, int>{};
     for (final emoji in expense.reactions.values) {
       reactionCounts[emoji] = (reactionCounts[emoji] ?? 0) + 1;
     }
+    final topReactions =
+        (reactionCounts.entries.toList()
+              ..sort((a, b) => b.value.compareTo(a.value)))
+            .take(_maxReactionKinds)
+            .toList();
 
     return SafeArea(
       child: Column(
@@ -183,12 +221,20 @@ class ExpensePage extends StatelessWidget {
                     ),
                   ),
                 ),
-                for (final entry in reactionCounts.entries)
+                for (final entry in topReactions)
                   Padding(
                     padding: const EdgeInsets.only(left: 6),
                     child: Text(
                       '${entry.key} ${entry.value}',
                       style: text.bodyMedium?.copyWith(color: Colors.white),
+                    ),
+                  ),
+                if (reactionCounts.length > topReactions.length)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: Text(
+                      '+${reactionCounts.length - topReactions.length}',
+                      style: text.bodyMedium,
                     ),
                   ),
               ],
@@ -216,6 +262,8 @@ class ExpensePage extends StatelessWidget {
                           expense.comments.isEmpty
                               ? 'Viết bình luận'
                               : 'Xem ${expense.comments.length} bình luận',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: text.bodyLarge?.copyWith(
                             color: Colors.white.withValues(alpha: 0.62),
                           ),
@@ -249,6 +297,39 @@ class ExpensePage extends StatelessWidget {
                         ),
                       ),
                     ),
+                  Tooltip(
+                    message: 'Chọn cảm xúc khác',
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => _openReactionPicker(context),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: otherReaction != null
+                              ? TachColors.mint.withValues(alpha: 0.35)
+                              : null,
+                        ),
+                        // Đã thả một cảm xúc ngoài ba cái bấm nhanh thì hiện
+                        // chính nó ở đây; chạm để đổi hoặc gỡ.
+                        child: otherReaction != null
+                            ? Text(
+                                otherReaction,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  height: 1.1,
+                                ),
+                              )
+                            : Icon(
+                                Icons.add_reaction_outlined,
+                                size: 22,
+                                color: Colors.white.withValues(alpha: 0.7),
+                              ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: 4),
                 ],
               ),

@@ -51,6 +51,25 @@ void main() {
     expect(cubit.state.expenses.first.reactions.containsKey(me), isFalse);
   });
 
+  test(
+    'đặt cảm xúc bất kỳ từ bảng emoji, đặt lại thì thay thế, null thì gỡ',
+    () {
+      final id = cubit.state.expenses.first.id;
+      final me = cubit.state.meId;
+
+      cubit.setReaction(id, '🥳');
+      expect(cubit.state.expenses.first.reactions[me], '🥳');
+      expect(cubit.state.expenses.first.reactions, hasLength(3));
+
+      cubit.setReaction(id, '🍳');
+      expect(cubit.state.expenses.first.reactions[me], '🍳');
+      expect(cubit.state.expenses.first.reactions, hasLength(3));
+
+      cubit.setReaction(id, null);
+      expect(cubit.state.expenses.first.reactions.containsKey(me), isFalse);
+    },
+  );
+
   test('bình luận trống bị bỏ qua, câu trả lời giữ id bình luận gốc', () {
     final expense = cubit.state.expenses.first;
     final count = expense.comments.length;

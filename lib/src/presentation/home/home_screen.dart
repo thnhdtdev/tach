@@ -16,6 +16,7 @@ import '../widgets/member_avatar.dart';
 import '../widgets/tach_mark.dart';
 
 /// Màn chính: camera ở trên cùng, vuốt lên là bảng tin, mỗi màn một khoản chi.
+/// Vuốt từ phải sang trái để mở hồ sơ.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.onSignOut});
 
@@ -29,6 +30,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final _pages = PageController();
   var _onFeed = false;
   var _capturing = false;
+
+  /// Quãng đã kéo ngang trong lần vuốt hiện tại; âm là kéo sang trái.
+  var _swipeDx = 0.0;
 
   @override
   void dispose() {
@@ -101,9 +105,19 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Vuốt từ phải sang trái ở màn chính thì mở hồ sơ: kéo đủ xa rồi thả, hoặc
+  /// hất nhanh sang trái. Kéo sang trái rồi kéo ngược lại thì thôi.
+  void _onSwipeEnd(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    final draggedFar = _swipeDx < -72 && velocity <= 0;
+    if (draggedFar || velocity < -600) _openProfile();
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<LedgerCubit>().state;
+    // Đang ghi dở một khoản thì không vuốt sang hồ sơ, tránh mất số đang gõ.
+    final canSwipe = !_capturing;
 
     return Theme(
       data: tachNightTheme,
@@ -115,61 +129,69 @@ class _HomeScreenState extends State<HomeScreen> {
               ? const Center(
                   child: CircularProgressIndicator(color: TachColors.mintLight),
                 )
-              : !state.hasGroup
-              ? _NoGroupView(
-                  state: state,
-                  onOpenProfile: _openProfile,
-                  onCreateGroup: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const CreateGroupScreen(),
-                    ),
-                  ),
-                )
-              : Stack(
-                  children: [
-                    PageView.builder(
-                      controller: _pages,
-                      scrollDirection: Axis.vertical,
-                      physics: _capturing
-                          ? const NeverScrollableScrollPhysics()
-                          : null,
-                      itemCount: state.expenses.length + 1,
-                      onPageChanged: (page) =>
-                          setState(() => _onFeed = page > 0),
-                      itemBuilder: (context, page) {
-                        if (page == 0) {
-                          return CapturePage(
-                            onBusyChanged: (busy) =>
-                                setState(() => _capturing = busy),
-                            onOpenFeed: () => _goToPage(1),
-                            onOpenProfile: _openProfile,
-                            onOpenGroups: _openGroups,
-                          );
-                        }
-                        final expense = state.expenses[page - 1];
-                        return ExpensePage(
-                          key: ValueKey(expense.id),
-                          expense: expense,
+              : GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onHorizontalDragStart: canSwipe ? (_) => _swipeDx = 0 : null,
+                  onHorizontalDragUpdate: canSwipe
+                      ? (details) => _swipeDx += details.primaryDelta ?? 0
+                      : null,
+                  onHorizontalDragEnd: canSwipe ? _onSwipeEnd : null,
+                  child: !state.hasGroup
+                      ? _NoGroupView(
                           state: state,
-                        );
-                      },
-                    ),
-                    Align(
-                      alignment: Alignment.bottomCenter,
-                      child: IgnorePointer(
-                        ignoring: !_onFeed,
-                        child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 180),
-                          opacity: _onFeed ? 1 : 0,
-                          child: _FeedBar(
-                            onMonth: _openMonth,
-                            onCamera: () => _goToPage(0),
-                            onBalance: _openBalance,
+                          onOpenProfile: _openProfile,
+                          onCreateGroup: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const CreateGroupScreen(),
+                            ),
                           ),
+                        )
+                      : Stack(
+                          children: [
+                            PageView.builder(
+                              controller: _pages,
+                              scrollDirection: Axis.vertical,
+                              physics: _capturing
+                                  ? const NeverScrollableScrollPhysics()
+                                  : null,
+                              itemCount: state.expenses.length + 1,
+                              onPageChanged: (page) =>
+                                  setState(() => _onFeed = page > 0),
+                              itemBuilder: (context, page) {
+                                if (page == 0) {
+                                  return CapturePage(
+                                    onBusyChanged: (busy) =>
+                                        setState(() => _capturing = busy),
+                                    onOpenFeed: () => _goToPage(1),
+                                    onOpenProfile: _openProfile,
+                                    onOpenGroups: _openGroups,
+                                  );
+                                }
+                                final expense = state.expenses[page - 1];
+                                return ExpensePage(
+                                  key: ValueKey(expense.id),
+                                  expense: expense,
+                                  state: state,
+                                );
+                              },
+                            ),
+                            Align(
+                              alignment: Alignment.bottomCenter,
+                              child: IgnorePointer(
+                                ignoring: !_onFeed,
+                                child: AnimatedOpacity(
+                                  duration: const Duration(milliseconds: 180),
+                                  opacity: _onFeed ? 1 : 0,
+                                  child: _FeedBar(
+                                    onMonth: _openMonth,
+                                    onCamera: () => _goToPage(0),
+                                    onBalance: _openBalance,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-                  ],
                 ),
         ),
       ),

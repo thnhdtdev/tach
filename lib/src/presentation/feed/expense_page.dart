@@ -50,6 +50,9 @@ class ExpensePage extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      // Không để bảng tràn lên dưới thanh trạng thái khi bàn phím mở.
+      useSafeArea: true,
+      showDragHandle: true,
       backgroundColor: TachColors.paper,
       // Bảng tin dùng theme tối; bảng bình luận là nền sáng.
       builder: (_) => Theme(

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -47,139 +49,178 @@ class _CommentsSheetState extends State<CommentsSheet> {
     final state = context.watch<LedgerCubit>().state;
     final expense = state.expenses.firstWhere((e) => e.id == widget.expenseId);
 
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    final screen = MediaQuery.sizeOf(context).height;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Bàn phím mở thì bảng thu lại cho vừa phần còn trống, vẫn chừa một dải
+        // nền mờ phía trên để tiêu đề không chui lên thanh trạng thái và người
+        // dùng còn chỗ chạm ra ngoài để đóng.
+        final room = constraints.maxHeight - keyboard - _scrimAbove;
+        final height = math.max(_minHeight, math.min(screen * 0.72, room));
+        return Padding(
+          padding: EdgeInsets.only(bottom: keyboard),
+          child: SizedBox(
+            height: height,
+            child: _content(text, state, expense),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Phần nền mờ tối thiểu còn lại phía trên bảng khi bàn phím mở.
+  static const _scrimAbove = 28.0;
+  static const _minHeight = 220.0;
+
+  Widget _content(TextTheme text, LedgerState state, Expense expense) {
     final roots = expense.comments.where((c) => c.parentId == null).toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     List<Comment> repliesOf(Comment root) =>
         expense.comments.where((c) => c.parentId == root.id).toList()
           ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.72,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    // Chạm vào chỗ trống trong bảng thì cất bàn phím.
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: _focus.unfocus,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 8, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Bình luận', style: text.titleLarge),
+                      const SizedBox(height: 2),
+                      Text('Cả nhóm cùng thấy', style: text.bodySmall),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  tooltip: 'Đóng',
+                  icon: const Icon(Icons.close, color: TachColors.ink),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: roots.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(
+                        'Chưa có bình luận. Hỏi hoặc nhắn gì đó về khoản này.',
+                        textAlign: TextAlign.center,
+                        style: text.bodyMedium,
+                      ),
+                    ),
+                  )
+                : ListView(
+                    // Kéo danh sách cũng cất bàn phím.
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                    children: [
+                      for (final root in roots) ...[
+                        _CommentTile(
+                          comment: root,
+                          state: state,
+                          onReply: () {
+                            setState(() => _replyTo = root);
+                            _focus.requestFocus();
+                          },
+                        ),
+                        for (final reply in repliesOf(root))
+                          Padding(
+                            padding: const EdgeInsets.only(left: 46),
+                            child: _CommentTile(
+                              comment: reply,
+                              state: state,
+                              small: true,
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+          ),
+          if (_replyTo != null)
+            Container(
+              color: TachColors.mintWash,
+              padding: const EdgeInsets.only(left: 24, right: 8),
+              child: Row(
                 children: [
-                  Text('Bình luận', style: text.titleLarge),
-                  const SizedBox(height: 2),
-                  Text('Cả nhóm cùng thấy', style: text.bodySmall),
+                  Expanded(
+                    child: Text(
+                      'Đang trả lời ${state.displayName(_replyTo!.userId)}',
+                      style: text.bodySmall?.copyWith(
+                        color: TachColors.mintDeep,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => setState(() => _replyTo = null),
+                    tooltip: 'Thôi trả lời',
+                    iconSize: 18,
+                    icon: const Icon(Icons.close, color: TachColors.mintDeep),
+                  ),
                 ],
               ),
             ),
-            const Divider(height: 1),
-            Expanded(
-              child: roots.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Text(
-                          'Chưa có bình luận. Hỏi hoặc nhắn gì đó về khoản này.',
-                          textAlign: TextAlign.center,
-                          style: text.bodyMedium,
+          const Divider(height: 1),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _input,
+                      focusNode: _focus,
+                      minLines: 1,
+                      maxLines: 3,
+                      textCapitalization: TextCapitalization.sentences,
+                      style: text.bodyLarge,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        hintText: 'Viết bình luận',
+                        hintStyle: text.bodyLarge?.copyWith(
+                          color: TachColors.inkSoft,
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF1F4F3),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(22),
+                          borderSide: BorderSide.none,
                         ),
                       ),
-                    )
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                      children: [
-                        for (final root in roots) ...[
-                          _CommentTile(
-                            comment: root,
-                            state: state,
-                            onReply: () {
-                              setState(() => _replyTo = root);
-                              _focus.requestFocus();
-                            },
-                          ),
-                          for (final reply in repliesOf(root))
-                            Padding(
-                              padding: const EdgeInsets.only(left: 46),
-                              child: _CommentTile(
-                                comment: reply,
-                                state: state,
-                                small: true,
-                              ),
-                            ),
-                        ],
-                      ],
+                      onChanged: (_) => setState(() {}),
+                      onSubmitted: (_) => _send(),
                     ),
-            ),
-            if (_replyTo != null)
-              Container(
-                color: TachColors.mintWash,
-                padding: const EdgeInsets.only(left: 24, right: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Đang trả lời ${state.displayName(_replyTo!.userId)}',
-                        style: text.bodySmall?.copyWith(
-                          color: TachColors.mintDeep,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => setState(() => _replyTo = null),
-                      tooltip: 'Thôi trả lời',
-                      iconSize: 18,
-                      icon: const Icon(Icons.close, color: TachColors.mintDeep),
-                    ),
-                  ],
-                ),
-              ),
-            const Divider(height: 1),
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _input,
-                        focusNode: _focus,
-                        minLines: 1,
-                        maxLines: 3,
-                        textCapitalization: TextCapitalization.sentences,
-                        style: text.bodyLarge,
-                        decoration: InputDecoration(
-                          isDense: true,
-                          hintText: 'Viết bình luận',
-                          hintStyle: text.bodyLarge?.copyWith(
-                            color: TachColors.inkSoft,
-                          ),
-                          filled: true,
-                          fillColor: const Color(0xFFF1F4F3),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(22),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        onChanged: (_) => setState(() {}),
-                        onSubmitted: (_) => _send(),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: _input.text.trim().isEmpty ? null : _send,
-                      tooltip: 'Gửi bình luận',
-                      color: TachColors.mint,
-                      icon: const Icon(Icons.arrow_upward_rounded),
-                    ),
-                  ],
-                ),
+                  ),
+                  IconButton(
+                    onPressed: _input.text.trim().isEmpty ? null : _send,
+                    tooltip: 'Gửi bình luận',
+                    color: TachColors.mint,
+                    icon: const Icon(Icons.arrow_upward_rounded),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

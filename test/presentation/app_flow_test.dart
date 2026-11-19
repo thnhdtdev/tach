@@ -303,6 +303,53 @@ void main() {
     expect(find.text('Đang trả lời Hùng'), findsNothing);
   });
 
+  testWidgets(
+    'bình luận: bàn phím mở thì bảng vẫn dưới thanh trạng thái, chạm chỗ '
+    'trống cất bàn phím, có nút đóng',
+    (tester) async {
+      await _launch(tester);
+      // iPhone có tai thỏ: thanh trạng thái cao 59, bàn phím cao 336.
+      const statusBar = 59.0;
+      tester.view.padding = const FakeViewPadding(top: statusBar * 3);
+      tester.view.viewPadding = const FakeViewPadding(top: statusBar * 3);
+      await _signIn(tester);
+      await tester.tap(find.textContaining('vừa ghi'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Xem 3 bình luận'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(TextField));
+      tester.view.viewInsets = const FakeViewPadding(bottom: 336 * 3);
+      await tester.pumpAndSettle();
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.focusNode!.hasFocus, isTrue);
+
+      // Tiêu đề và nút đóng nằm hẳn dưới thanh trạng thái, ô nhập nằm trên
+      // bàn phím.
+      expect(
+        tester.getTopLeft(find.text('Bình luận')).dy,
+        greaterThan(statusBar),
+      );
+      expect(
+        tester.getTopLeft(find.byTooltip('Đóng')).dy,
+        greaterThan(statusBar),
+      );
+      expect(
+        tester.getBottomLeft(find.byType(TextField)).dy,
+        lessThan(844 - 336),
+      );
+
+      await tester.tap(find.text('Tối nay ai nấu vậy?'));
+      await tester.pumpAndSettle();
+      expect(field.focusNode!.hasFocus, isFalse);
+      expect(find.text('Cả nhóm cùng thấy'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Đóng'));
+      await tester.pumpAndSettle();
+      expect(find.text('Cả nhóm cùng thấy'), findsNothing);
+    },
+  );
+
   testWidgets('hồ sơ: đổi tên, sửa tài khoản nhận tiền và đăng xuất', (
     tester,
   ) async {
@@ -492,6 +539,53 @@ void main() {
     await tester.pumpAndSettle();
     expect(cubit.state.group.name, 'Trọ 12');
     expect(find.textContaining('vừa ghi'), findsOneWidget);
+  });
+
+  testWidgets('vuốt từ phải sang trái ở camera và bảng tin thì mở hồ sơ', (
+    tester,
+  ) async {
+    await _launch(tester);
+    await _signIn(tester);
+    final preview = find.byKey(const ValueKey('live-preview'));
+
+    // Vuốt ngược chiều, hoặc nhích nhẹ rồi thả, thì không mở.
+    await tester.drag(preview, const Offset(200, 0));
+    await tester.pumpAndSettle();
+    await tester.drag(preview, const Offset(-40, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Thành viên Trọ 12'), findsNothing);
+
+    await tester.drag(preview, const Offset(-200, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Thành viên Trọ 12'), findsOneWidget);
+    expect(_camera.zooms, isEmpty);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('vừa ghi'));
+    await tester.pumpAndSettle();
+    expect(find.text('Minh'), findsOneWidget);
+
+    // Hất nhanh một quãng ngắn cũng tính.
+    await tester.fling(find.text('30.000đ'), const Offset(-60, 0), 1500);
+    await tester.pumpAndSettle();
+    expect(find.text('Thành viên Trọ 12'), findsOneWidget);
+  });
+
+  testWidgets('đang gõ số tiền thì vuốt ngang không mở hồ sơ', (tester) async {
+    await _launch(tester);
+    await _signIn(tester);
+
+    await tester.tap(find.bySemanticsLabel('Chụp'));
+    await tester.pumpAndSettle();
+    // Kéo ngay trên ảnh; lớp số tiền nằm đè lên nên kéo theo tọa độ.
+    await tester.dragFrom(
+      tester.getCenter(find.byType(ExpensePhoto)),
+      const Offset(-250, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Thành viên Trọ 12'), findsNothing);
+    expect(find.byKey(const ValueKey('key-0')), findsOneWidget);
   });
 
   testWidgets('hồ sơ: mở màn mời bạn vào nhóm đang mở', (tester) async {

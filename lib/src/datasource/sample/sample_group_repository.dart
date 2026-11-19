@@ -39,6 +39,9 @@ class SampleGroupRepository implements GroupRepository {
   Future<void> addExpense(String groupId, Expense expense) async {}
 
   @override
+  Future<void> deleteExpense(String groupId, String expenseId) async {}
+
+  @override
   Future<void> setReaction(String expenseId, String? emoji) async {}
 
   @override

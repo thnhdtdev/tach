@@ -245,6 +245,16 @@ class SupabaseGroupRepository implements GroupRepository {
   }
 
   @override
+  Future<void> deleteExpense(String groupId, String expenseId) async {
+    await _client.rpc<void>('delete_expense', params: {'p_id': expenseId});
+    try {
+      await _client.storage.from('photos').remove(['$groupId/$expenseId.jpg']);
+    } on Exception {
+      // Khoản chi đã mất; ảnh sót lại trong kho không ai mở được nữa.
+    }
+  }
+
+  @override
   Future<void> setReaction(String expenseId, String? emoji) {
     final reactions = _client.from('reactions');
     if (emoji == null) {

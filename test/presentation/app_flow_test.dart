@@ -551,6 +551,44 @@ void main() {
     expect(find.textContaining('vừa ghi'), findsOneWidget);
   });
 
+  testWidgets(
+    'xóa khoản mình ghi ở bảng tin, khoản người khác không có nút xóa',
+    (tester) async {
+      await _launch(tester);
+      await _signIn(tester);
+      final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+      final count = cubit.state.expenses.length;
+
+      await tester.tap(find.textContaining('vừa ghi'));
+      await tester.pumpAndSettle();
+      expect(find.text('Minh'), findsOneWidget);
+      expect(find.byTooltip('Xóa khoản chi'), findsNothing);
+
+      await tester.fling(find.byType(PageView), const Offset(0, -400), 2000);
+      await tester.pumpAndSettle();
+      await tester.fling(find.byType(PageView), const Offset(0, -400), 2000);
+      await tester.pumpAndSettle();
+      expect(find.text('Gạo 5kg'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Xóa khoản chi'));
+      await tester.pumpAndSettle();
+      expect(find.text('Xóa khoản chi này?'), findsOneWidget);
+      await tester.tap(find.text('Giữ lại'));
+      await tester.pumpAndSettle();
+      expect(cubit.state.expenses, hasLength(count));
+
+      await tester.tap(find.byTooltip('Xóa khoản chi'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Xóa khoản chi'));
+      await tester.pumpAndSettle();
+
+      expect(cubit.state.expenses, hasLength(count - 1));
+      expect(find.text('Gạo 5kg'), findsNothing);
+      expect(find.text('Đã xóa khoản chi.'), findsOneWidget);
+      expect(find.text('Nước rửa bát, giấy'), findsOneWidget);
+    },
+  );
+
   testWidgets('vuốt từ phải sang trái ở camera và bảng tin thì mở hồ sơ', (
     tester,
   ) async {

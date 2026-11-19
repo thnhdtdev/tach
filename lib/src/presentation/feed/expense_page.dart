@@ -60,6 +60,40 @@ class ExpensePage extends StatelessWidget {
     );
   }
 
+  Future<void> _delete(BuildContext context) async {
+    final cubit = context.read<LedgerCubit>();
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => Theme(
+        data: tachLightTheme,
+        child: AlertDialog(
+          title: const Text('Xóa khoản chi này?'),
+          content: Text(
+            'Ảnh và khoản chi ${formatVnd(expense.amount)} sẽ mất với cả nhóm, '
+            'số dư được tính lại. Việc này không hoàn tác được.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Giữ lại'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: TextButton.styleFrom(foregroundColor: TachColors.danger),
+              child: const Text('Xóa khoản chi'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) return;
+    cubit.deleteExpense(expense.id);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('Đã xóa khoản chi.')));
+  }
+
   void _openReactionPicker(BuildContext context) {
     final cubit = context.read<LedgerCubit>();
     showModalBottomSheet<void>(
@@ -130,6 +164,15 @@ class ExpensePage extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (expense.payerId == state.meId)
+                  IconButton(
+                    onPressed: () => _delete(context),
+                    tooltip: 'Xóa khoản chi',
+                    icon: Icon(
+                      Icons.delete_outline,
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                  ),
               ],
             ),
           ),

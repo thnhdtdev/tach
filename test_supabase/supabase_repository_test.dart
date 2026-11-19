@@ -147,6 +147,42 @@ void main() {
         throwsA(isA<PostgrestException>()),
       );
 
+      final mistake = Expense(
+        id: newUuid(),
+        payerId: an.id,
+        amount: 99000,
+        note: 'Ghi nhầm',
+        photoBytes: photo,
+        splits: {an.id: 49500, minh.id: 49500},
+        createdAt: DateTime.now(),
+      );
+      final mistakePhoto = '${group.id}/${mistake.id}.jpg';
+      await an.repository.addExpense(group.id, mistake);
+      await minh.repository.addComment(
+        mistake.id,
+        Comment(
+          id: newUuid(),
+          userId: minh.id,
+          text: 'Nhầm rồi',
+          createdAt: DateTime.now(),
+        ),
+      );
+
+      await expectLater(
+        minh.repository.deleteExpense(group.id, mistake.id),
+        throwsA(isA<PostgrestException>()),
+      );
+      await minh.client.storage.from('photos').remove([mistakePhoto]);
+      expect(await outsider.photos.load(mistakePhoto), isNull);
+      expect(await minh.photos.load(mistakePhoto), isNotNull);
+      expect((await an.repository.load()).groups.single.expenses, hasLength(2));
+
+      await an.repository.deleteExpense(group.id, mistake.id);
+      theirs = await minh.repository.load();
+      expect(theirs.groups.single.expenses.single.id, expense.id);
+      expect(await SupabasePhotoLoader(minh.client).load(mistakePhoto), isNull);
+      await an.repository.deleteExpense(group.id, mistake.id);
+
       await minh.repository.setReaction(expense.id, '👍');
       await minh.repository.setReaction(expense.id, '😂');
       final root = Comment(

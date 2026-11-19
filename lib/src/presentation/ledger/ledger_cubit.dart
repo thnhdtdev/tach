@@ -309,6 +309,24 @@ class LedgerCubit extends Cubit<LedgerState> {
     return expense;
   }
 
+  /// Chỉ người ghi khoản chi mới xóa được nó.
+  void deleteExpense(String expenseId) {
+    final mine = state.expenses.any(
+      (e) => e.id == expenseId && e.payerId == state.meId,
+    );
+    if (!mine) return;
+    final groupId = state.currentGroupId;
+    emit(
+      state.copyWith(
+        expenses: [
+          for (final e in state.expenses)
+            if (e.id != expenseId) e,
+        ],
+      ),
+    );
+    _save(() => _repository.deleteExpense(groupId, expenseId));
+  }
+
   void _updateExpense(String id, Expense Function(Expense) change) {
     emit(
       state.copyWith(

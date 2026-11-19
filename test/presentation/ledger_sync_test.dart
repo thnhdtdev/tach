@@ -90,6 +90,20 @@ class _FakeServer implements GroupRepository {
   }
 
   @override
+  Future<void> deleteExpense(String groupId, String expenseId) async {
+    await _call('deleteExpense');
+    final group = groups[groupId]!;
+    groups[groupId] = GroupSnapshot(
+      group: group.group,
+      expenses: [
+        for (final e in group.expenses)
+          if (e.id != expenseId) e,
+      ],
+      settlements: group.settlements,
+    );
+  }
+
+  @override
   Future<void> addExpense(String groupId, Expense expense) async {
     await _call('addExpense ${expense.note}');
     final group = groups[groupId]!;
@@ -244,6 +258,23 @@ void main() {
     // Khoản vừa ghi đã lên máy chủ trước khi tải lại nên không bị mất.
     expect(cubit.state.expenses.single.note, 'Xăng');
   });
+
+  test(
+    'xóa khoản vừa ghi: xóa trên máy chủ sau khi khoản đã ghi xong',
+    () async {
+      final expense = cubit.addExpense(
+        amount: 30000,
+        note: 'Trứng',
+        participantIds: ['u-an', 'u-minh'],
+      );
+      cubit.deleteExpense(expense.id);
+      expect(cubit.state.expenses, isEmpty);
+
+      await settle();
+      expect(server.calls, ['addExpense Trứng', 'deleteExpense']);
+      expect(server.groups['g-1']!.expenses, isEmpty);
+    },
+  );
 
   test('rời nhóm và xóa nhóm gọi đúng hàm trên máy chủ', () async {
     expect(cubit.leaveGroup(), isTrue);

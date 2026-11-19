@@ -26,6 +26,32 @@ void main() {
     expect(mine.amount, 266000);
   });
 
+  test('xóa khoản mình ghi: khoản mất khỏi bảng tin, số dư tính lại', () {
+    final before = cubit.state.myNet;
+    final mine = cubit.state.expenses.firstWhere(
+      (e) => e.payerId == cubit.state.meId,
+    );
+    final count = cubit.state.expenses.length;
+
+    cubit.deleteExpense(mine.id);
+
+    expect(cubit.state.expenses, hasLength(count - 1));
+    expect(cubit.state.expenses.any((e) => e.id == mine.id), isFalse);
+    final owedToMe = mine.amount - (mine.splits[cubit.state.meId] ?? 0);
+    expect(cubit.state.myNet, before - owedToMe);
+  });
+
+  test('khoản người khác ghi thì không xóa được', () {
+    final theirs = cubit.state.expenses.firstWhere(
+      (e) => e.payerId != cubit.state.meId,
+    );
+    final count = cubit.state.expenses.length;
+
+    cubit.deleteExpense(theirs.id);
+
+    expect(cubit.state.expenses, hasLength(count));
+  });
+
   test('ghi khoản mới: khoản đứng đầu bảng tin và số dư cập nhật', () {
     final before = cubit.state.myNet;
     final everyone = cubit.state.group.members.map((m) => m.id).toList();

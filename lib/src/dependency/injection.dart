@@ -8,6 +8,7 @@ import '../services/auth/auth_service.dart';
 import '../services/avatar/avatar_picker.dart';
 import '../services/camera/capture_camera.dart';
 import '../services/photo/photo_loader.dart';
+import '../services/photo/photo_sharer.dart';
 import '../services/preferences/app_preferences.dart';
 
 final getIt = GetIt.instance;
@@ -16,6 +17,7 @@ void configureDependencies({SupabaseClient? supabase}) {
   getIt
     ..registerLazySingleton<AppPreferences>(AppPreferences.new)
     ..registerLazySingleton<AvatarPicker>(ImagePickerAvatarPicker.new)
+    ..registerLazySingleton<PhotoSharer>(SystemPhotoSharer.new)
     ..registerFactory<CaptureCamera>(PluginCaptureCamera.new);
 
   if (supabase == null) {

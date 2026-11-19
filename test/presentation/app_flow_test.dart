@@ -12,6 +12,7 @@ import 'package:tach/src/domain/entities/group.dart';
 import 'package:tach/src/services/avatar/avatar_picker.dart';
 import 'package:tach/src/services/camera/capture_camera.dart';
 import 'package:tach/src/services/camera/zoom_plan.dart';
+import 'package:tach/src/services/photo/photo_sharer.dart';
 import 'package:tach/src/presentation/feed/feed_background.dart';
 import 'package:tach/src/presentation/home/home_screen.dart';
 import 'package:tach/src/presentation/ledger/ledger_cubit.dart';
@@ -132,7 +133,16 @@ class _FakeCamera implements CaptureCamera {
   Future<void> close() async => closes++;
 }
 
+class _FakeSharer implements PhotoSharer {
+  final shared = <Uint8List>[];
+
+  @override
+  Future<void> share(Uint8List photo, {Rect? origin}) async =>
+      shared.add(photo);
+}
+
 late _FakeCamera _camera;
+late _FakeSharer _sharer;
 
 Future<void> _launch(
   WidgetTester tester, {
@@ -149,9 +159,12 @@ Future<void> _launch(
   await getIt.reset();
   configureDependencies();
   _camera = _FakeCamera(cameraStatus);
+  _sharer = _FakeSharer();
   getIt
     ..unregister<CaptureCamera>()
-    ..registerFactory<CaptureCamera>(() => _camera);
+    ..registerFactory<CaptureCamera>(() => _camera)
+    ..unregister<PhotoSharer>()
+    ..registerSingleton<PhotoSharer>(_sharer);
 
   await tester.pumpWidget(const TachApp());
   await tester.pumpAndSettle();
@@ -576,7 +589,7 @@ void main() {
       await tester.tap(find.textContaining('vừa ghi'));
       await tester.pumpAndSettle();
       expect(find.text('Minh'), findsOneWidget);
-      expect(find.byTooltip('Xóa khoản chi'), findsNothing);
+      expect(find.byTooltip('Tùy chọn'), findsNothing);
 
       await tester.fling(find.byType(PageView), const Offset(0, -400), 2000);
       await tester.pumpAndSettle();
@@ -584,14 +597,19 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Gạo 5kg'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Xóa khoản chi'));
+      await tester.tap(find.byTooltip('Tùy chọn'));
+      await tester.pumpAndSettle();
+      expect(find.text('Chia sẻ ảnh'), findsNothing);
+      await tester.tap(find.text('Xóa khoản chi'));
       await tester.pumpAndSettle();
       expect(find.text('Xóa khoản chi này?'), findsOneWidget);
       await tester.tap(find.text('Giữ lại'));
       await tester.pumpAndSettle();
       expect(cubit.state.expenses, hasLength(count));
 
-      await tester.tap(find.byTooltip('Xóa khoản chi'));
+      await tester.tap(find.byTooltip('Tùy chọn'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Xóa khoản chi'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Xóa khoản chi'));
       await tester.pumpAndSettle();
@@ -933,6 +951,32 @@ void main() {
       expect(added.hasPhoto, isTrue);
       expect(find.byKey(const ValueKey('live-preview')), findsOneWidget);
       await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('chia sẻ ảnh của khoản vừa chụp từ bảng tin', (tester) async {
+      await _launch(tester);
+      await _signIn(tester);
+
+      await tester.tap(find.bySemanticsLabel('Chụp'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('key-5')));
+      await tester.pump();
+      await tester.tap(find.text('Xong'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Gửi'));
+      await tester.pump(const Duration(seconds: 3));
+      await tester.fling(find.byType(PageView), const Offset(0, -400), 2000);
+      await tester.pumpAndSettle();
+      expect(find.text('5.000đ'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Tùy chọn'));
+      await tester.pumpAndSettle();
+      expect(find.text('Xóa khoản chi'), findsOneWidget);
+      await tester.tap(find.text('Chia sẻ ảnh'));
+      await tester.pumpAndSettle();
+
+      expect(_sharer.shared, [_tinyPng]);
+      expect(find.text('Chia sẻ ảnh'), findsNothing);
     });
 
     testWidgets('màn khác che thì nhả camera, quay lại thì mở lại', (

@@ -5,7 +5,10 @@ import '../../core/format/money.dart';
 import '../../core/format/time_ago.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../dependency/injection.dart';
 import '../../domain/entities/expense.dart';
+import '../../services/photo/photo_loader.dart';
+import '../../services/photo/photo_sharer.dart';
 import '../ledger/ledger_cubit.dart';
 import '../widgets/expense_photo.dart';
 import '../widgets/member_avatar.dart';
@@ -58,6 +61,86 @@ class ExpensePage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  bool get _isMine => expense.payerId == state.meId;
+
+  /// Ảnh mẫu và ô thay thế của khoản không có ảnh thì không có gì để chia sẻ.
+  bool get _hasSharablePhoto =>
+      expense.photoBytes != null ||
+      (expense.photoUrl?.startsWith(remotePhotoPrefix) ?? false);
+
+  Future<void> _openActions(BuildContext context) async {
+    final action = await showModalBottomSheet<_ExpenseAction>(
+      context: context,
+      backgroundColor: TachColors.paper,
+      showDragHandle: true,
+      // Bảng tin dùng theme tối; bảng này là nền sáng.
+      builder: (sheetContext) => Theme(
+        data: tachLightTheme,
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_hasSharablePhoto)
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                  leading: const Icon(Icons.ios_share),
+                  title: const Text('Chia sẻ ảnh'),
+                  onTap: () =>
+                      Navigator.of(sheetContext).pop(_ExpenseAction.share),
+                ),
+              if (_isMine)
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                  leading: const Icon(Icons.delete_outline),
+                  iconColor: TachColors.danger,
+                  textColor: TachColors.danger,
+                  title: const Text('Xóa khoản chi'),
+                  onTap: () =>
+                      Navigator.of(sheetContext).pop(_ExpenseAction.delete),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!context.mounted) return;
+    switch (action) {
+      case _ExpenseAction.share:
+        await _share(context);
+      case _ExpenseAction.delete:
+        await _delete(context);
+      case null:
+    }
+  }
+
+  Future<void> _share(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    void tell(String message) => messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box == null
+        ? null
+        : box.localToGlobal(Offset.zero) & box.size;
+
+    final photo =
+        expense.photoBytes ??
+        await getIt<PhotoLoader>().load(
+          expense.photoUrl!.substring(remotePhotoPrefix.length),
+        );
+    if (photo == null) {
+      tell('Chưa tải được ảnh. Kiểm tra mạng rồi thử lại.');
+      return;
+    }
+    try {
+      await getIt<PhotoSharer>().share(photo, origin: origin);
+    } on Exception {
+      tell('Không mở được bảng chia sẻ. Thử lại nhé.');
+    }
   }
 
   Future<void> _delete(BuildContext context) async {
@@ -164,12 +247,12 @@ class ExpensePage extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (expense.payerId == state.meId)
+                if (_hasSharablePhoto || _isMine)
                   IconButton(
-                    onPressed: () => _delete(context),
-                    tooltip: 'Xóa khoản chi',
+                    onPressed: () => _openActions(context),
+                    tooltip: 'Tùy chọn',
                     icon: Icon(
-                      Icons.delete_outline,
+                      Icons.more_horiz,
                       color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
@@ -383,3 +466,5 @@ class ExpensePage extends StatelessWidget {
     );
   }
 }
+
+enum _ExpenseAction { share, delete }

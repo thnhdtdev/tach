@@ -8,6 +8,7 @@ Future<Uint8List> squareJpeg(
   Uint8List bytes, {
   int side = 1080,
   int quality = 85,
+  bool mirror = false,
 }) async {
   final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
   final descriptor = await ui.ImageDescriptor.encoded(buffer);
@@ -25,7 +26,13 @@ Future<Uint8List> squareJpeg(
   final decoded = frame.image;
 
   final recorder = ui.PictureRecorder();
-  ui.Canvas(recorder).drawImageRect(
+  final canvas = ui.Canvas(recorder);
+  if (mirror) {
+    canvas
+      ..translate(target.toDouble(), 0)
+      ..scale(-1, 1);
+  }
+  canvas.drawImageRect(
     decoded,
     ui.Rect.fromCenter(
       center: ui.Offset(decoded.width / 2, decoded.height / 2),

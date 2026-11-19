@@ -2,6 +2,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../photo/photo_compressor.dart';
 import 'zoom_plan.dart';
 
 enum CameraStatus {
@@ -223,8 +224,12 @@ class PluginCaptureCamera implements CaptureCamera {
     if (controller == null) {
       throw CameraException('cameraNotReady', 'Camera chưa mở');
     }
+    final front = isFront;
     final file = await controller.takePicture();
-    return file.readAsBytes();
+    final bytes = await file.readAsBytes();
+    // Khung ngắm camera trước là hình soi gương còn ảnh chụp thì không; lật lại
+    // để ảnh giống đúng lúc ngắm.
+    return front ? squareJpeg(bytes, quality: 95, mirror: true) : bytes;
   }
 
   @override

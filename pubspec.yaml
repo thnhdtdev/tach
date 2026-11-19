@@ -70,6 +70,10 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Ảnh minh họa màn giới thiệu, giấy phép CC0 (nguồn ghi trong README).
+  assets:
+    - assets/images/onboarding/
+
   # Montserrat (SIL Open Font License, xem assets/fonts/OFL.txt).
   fonts:
     - family: Montserrat

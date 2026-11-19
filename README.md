@@ -60,6 +60,14 @@ chính. Các khoản mẫu có sẵn dùng ảnh minh họa vẽ sẵn; trên m�
 Font chữ là Montserrat, giấy phép SIL Open Font License
 (`assets/fonts/OFL.txt`).
 
+Ảnh minh họa ở màn giới thiệu (`assets/images/onboarding/`) thuộc phạm vi công
+cộng, giấy phép [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/),
+đã cắt vuông:
+
+- `eggs.jpg`: [rawpixel](https://www.rawpixel.com/image/5920771/photo-image-background-public-domain-food)
+- `hotpot.jpg`: "Hot pot" của clvs7 trên
+  [Flickr](https://www.flickr.com/photos/182866455@N04/54448305782)
+
 ## Chạy app
 
 ```bash

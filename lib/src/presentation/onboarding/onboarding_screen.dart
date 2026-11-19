@@ -2,7 +2,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../widgets/expense_photo.dart';
 import '../widgets/member_avatar.dart';
 
 /// Ba màn giới thiệu, chỉ hiện ở lần mở app đầu tiên.
@@ -99,13 +98,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       children: [
                         Expanded(
                           child: Center(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: switch (i) {
-                                0 => const _CaptureArt(),
-                                1 => const _SplitArt(),
-                                _ => const _PayArt(),
-                              },
+                            // Hình minh họa; nội dung đã có ở tiêu đề và mô tả.
+                            child: ExcludeSemantics(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Padding(
+                                  // Chừa chỗ cho bóng đổ dưới ô ảnh.
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 24,
+                                  ),
+                                  child: switch (i) {
+                                    0 => const _CaptureArt(),
+                                    1 => const _SplitArt(),
+                                    _ => const _PayArt(),
+                                  },
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -166,58 +174,148 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-/// Một tấm ảnh có số tiền đóng lên, đúng như khi ghi một khoản chi.
-class _CaptureArt extends StatelessWidget {
-  const _CaptureArt();
+/// Ô ảnh vuông bo góc lớn, góc dưới bên trái có avatar người ghi và một nhãn
+/// chú thích, theo kiểu ô ảnh trên màn hình chính của điện thoại.
+class _PhotoTile extends StatelessWidget {
+  const _PhotoTile({
+    required this.size,
+    required this.owner,
+    required this.tone,
+    required this.strong,
+    required this.child,
+    this.label,
+  });
+
+  final double size;
+
+  /// Tên người ghi khoản, dùng cho avatar.
+  final String owner;
+  final Color tone;
+
+  /// Phần chữ thường của nhãn, đứng trước [strong]. Bỏ trống nếu không cần.
+  final String? label;
+
+  /// Phần chữ đậm của nhãn, thường là số tiền.
+  final String strong;
+
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: -0.06,
-      child: Container(
-        width: 256,
-        height: 256,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(28)),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const ExpensePhoto(photoUrl: 'sample:eggs'),
-            Positioned(
-              left: 18,
-              bottom: 16,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    '30.000đ',
-                    style: TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      height: 1.1,
-                      letterSpacing: -0.8,
-                    ),
-                  ),
-                  Text(
-                    'Trứng',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
+    final radius = BorderRadius.circular(size * 0.2);
+    final inset = size * 0.065;
+    const caption = TextStyle(
+      fontSize: 14,
+      color: Colors.white,
+      height: 1.2,
+      fontWeight: FontWeight.w500,
+    );
+
+    return SizedBox.square(
+      dimension: size,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x260B5F55),
+                    blurRadius: 30,
+                    offset: Offset(0, 16),
                   ),
                 ],
               ),
+              child: ClipRRect(borderRadius: radius, child: child),
             ),
-          ],
-        ),
+          ),
+          Positioned(
+            left: inset,
+            right: inset,
+            bottom: inset,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: MemberAvatar(name: owner, tone: tone, size: 34),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 9,
+                    ),
+                    decoration: const ShapeDecoration(
+                      color: Color(0xD91B2422),
+                      shape: StadiumBorder(),
+                    ),
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          if (label != null) TextSpan(text: '$label '),
+                          TextSpan(
+                            text: strong,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: caption,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Khoản 30.000đ được tách cho bốn người.
+/// Ảnh minh họa trong `assets/images/onboarding/`, lấp đầy ô chứa nó.
+class _Photo extends StatelessWidget {
+  const _Photo(this.name);
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/images/onboarding/$name.jpg',
+      fit: BoxFit.cover,
+      // Ô lớn nhất rộng 264 điểm; giải mã vừa đủ cho màn hình 3x.
+      cacheWidth: 680,
+      errorBuilder: (_, _, _) => const ColoredBox(color: TachColors.mintWash),
+    );
+  }
+}
+
+/// Một tấm ảnh vừa chụp, kèm người ghi và số tiền.
+class _CaptureArt extends StatelessWidget {
+  const _CaptureArt();
+
+  @override
+  Widget build(BuildContext context) {
+    return _PhotoTile(
+      size: 264,
+      owner: 'Minh',
+      tone: TachColors.avatarTones[1],
+      label: 'Trứng',
+      strong: '30.000đ',
+      child: const _Photo('eggs'),
+    );
+  }
+}
+
+/// Bữa lẩu 320.000đ được tách cho bốn người.
 class _SplitArt extends StatelessWidget {
   const _SplitArt();
 
@@ -227,24 +325,14 @@ class _SplitArt extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 120,
-          height: 120,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22)),
-          child: const ExpensePhoto(photoUrl: 'sample:eggs'),
+        _PhotoTile(
+          size: 184,
+          owner: 'Lan',
+          tone: TachColors.avatarTones[2],
+          strong: '320.000đ',
+          child: const _Photo('hotpot'),
         ),
-        const SizedBox(height: 12),
-        const Text(
-          '30.000đ',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            color: TachColors.ink,
-            letterSpacing: -0.6,
-          ),
-        ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 30),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -260,7 +348,7 @@ class _SplitArt extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '7.500đ',
+                      '80.000đ',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -277,7 +365,7 @@ class _SplitArt extends StatelessWidget {
   }
 }
 
-/// Mã QR đúng số tiền và trạng thái "Đã trả".
+/// Mã QR đúng số tiền, đúng người nhận, và trạng thái "Đã trả".
 class _PayArt extends StatelessWidget {
   const _PayArt();
 
@@ -286,42 +374,43 @@ class _PayArt extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: TachColors.paper,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: TachColors.line),
-          ),
-          child: Column(
-            children: [
-              QrImageView(
-                data: 'Tach - Chụp là ghi, tách là xong.',
-                size: 168,
-                padding: EdgeInsets.zero,
-                eyeStyle: const QrEyeStyle(
-                  eyeShape: QrEyeShape.square,
-                  color: TachColors.ink,
+        _PhotoTile(
+          size: 264,
+          owner: 'Lan',
+          tone: TachColors.avatarTones[2],
+          label: 'Trả Lan',
+          strong: '266.000đ',
+          // Nền mint nhạt để ô còn rõ hình trên màn trắng; mã QR nằm trên thẻ
+          // trắng, phía trên hàng avatar và nhãn.
+          child: ColoredBox(
+            color: TachColors.mintWash,
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Container(
+                margin: const EdgeInsets.only(top: 22),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: TachColors.paper,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                dataModuleStyle: const QrDataModuleStyle(
-                  dataModuleShape: QrDataModuleShape.square,
-                  color: TachColors.ink,
+                child: QrImageView(
+                  data: 'Tach - Chụp là ghi, tách là xong.',
+                  size: 140,
+                  padding: EdgeInsets.zero,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: TachColors.ink,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: TachColors.ink,
+                  ),
                 ),
               ),
-              const SizedBox(height: 14),
-              const Text(
-                '266.000đ',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: TachColors.mint,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 32),
         const Row(
           mainAxisSize: MainAxisSize.min,
           children: [

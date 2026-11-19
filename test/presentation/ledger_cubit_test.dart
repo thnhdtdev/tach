@@ -313,25 +313,30 @@ void main() {
 }
 
 /// Người dùng chỉ ở một nhóm chưa có khoản chi nào, do người khác tạo.
-class _SoloGroupRepository implements GroupRepository {
+/// Nhóm hai người chưa có khoản chi nào, do Minh tạo. Kế thừa bản mẫu để dùng
+/// lại các hàm ghi không làm gì.
+class _SoloGroupRepository extends SampleGroupRepository {
   @override
-  Future<GroupSnapshot> loadCurrentGroup() async {
-    return const GroupSnapshot(
-      group: Group(
-        id: 'g-solo',
-        name: 'Một mình',
-        code: 'MOTMINH',
-        type: GroupType.room,
-        inviteCode: 'ABCDEF',
-        createdBy: 'u-minh',
-        members: [
-          Member(id: 'u-an', name: 'An'),
-          Member(id: 'u-minh', name: 'Minh'),
-        ],
-      ),
-      currentUserId: 'u-an',
-      expenses: [],
-      settlements: [],
+  Future<LedgerSnapshot> load() async {
+    const me = Member(id: 'u-an', name: 'An');
+    return const LedgerSnapshot(
+      me: me,
+      groups: [
+        GroupSnapshot(
+          group: Group(
+            id: 'g-solo',
+            name: 'Một mình',
+            code: 'MOTMINH',
+            type: GroupType.room,
+            inviteCode: 'ABCDEF',
+            createdBy: 'u-minh',
+            members: [
+              me,
+              Member(id: 'u-minh', name: 'Minh'),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

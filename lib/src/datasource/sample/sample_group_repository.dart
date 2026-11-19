@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../../domain/entities/expense.dart';
 import '../../domain/entities/group.dart';
 import '../../domain/entities/settlement.dart';
@@ -14,8 +16,52 @@ class SampleGroupRepository implements GroupRepository {
   static const _hung = 'u-hung';
   static const _everyone = [_me, _minh, _lan, _hung];
 
+  static const _groupId = 'g-tro12';
+
   @override
-  Future<GroupSnapshot> loadCurrentGroup() async {
+  bool get persists => false;
+
+  // Thay đổi chỉ sống trong bộ nhớ của app nên các hàm ghi không làm gì.
+
+  @override
+  Future<void> createGroup(Group group) async {}
+
+  /// Bản mẫu coi mọi mã mời là mã của nhóm mẫu.
+  @override
+  Future<String?> joinGroup(String inviteCode) async => _groupId;
+
+  @override
+  Future<void> renameGroup(String groupId, String name) async {}
+
+  @override
+  Future<void> leaveGroup(String groupId) async {}
+
+  @override
+  Future<void> deleteGroup(String groupId) async {}
+
+  @override
+  Future<void> addExpense(String groupId, Expense expense) async {}
+
+  @override
+  Future<void> setReaction(String expenseId, String? emoji) async {}
+
+  @override
+  Future<void> addComment(String expenseId, Comment comment) async {}
+
+  @override
+  Future<void> saveProfile(Member me) async {}
+
+  @override
+  Future<void> setAvatar(Uint8List? bytes) async {}
+
+  @override
+  Future<void> addSettlement(String groupId, Settlement settlement) async {}
+
+  @override
+  Future<void> confirmSettlement(String settlementId) async {}
+
+  @override
+  Future<LedgerSnapshot> load() async {
     final now = DateTime.now();
     var nextId = 0;
 
@@ -46,49 +92,49 @@ class SampleGroupRepository implements GroupRepository {
       );
     }
 
-    return GroupSnapshot(
-      group: const Group(
-        id: 'g-tro12',
-        name: 'Trọ 12',
-        code: 'TRO12',
-        type: GroupType.room,
-        inviteCode: 'K7M2QP',
-        createdBy: _me,
-        members: [
-          Member(
-            id: _me,
-            name: 'An',
-            bank: BankAccount(
-              bin: '970422',
-              bankName: 'MB Bank',
-              accountNumber: '0000000001',
-              holderName: 'TAI KHOAN MAU AN',
-            ),
+    const group = Group(
+      id: _groupId,
+      name: 'Trọ 12',
+      code: 'TRO12',
+      type: GroupType.room,
+      inviteCode: 'K7M2QP',
+      createdBy: _me,
+      members: [
+        Member(
+          id: _me,
+          name: 'An',
+          bank: BankAccount(
+            bin: '970422',
+            bankName: 'MB Bank',
+            accountNumber: '0000000001',
+            holderName: 'TAI KHOAN MAU AN',
           ),
-          Member(
-            id: _minh,
-            name: 'Minh',
-            bank: BankAccount(
-              bin: '970436',
-              bankName: 'Vietcombank',
-              accountNumber: '0000000002',
-              holderName: 'TAI KHOAN MAU MINH',
-            ),
+        ),
+        Member(
+          id: _minh,
+          name: 'Minh',
+          bank: BankAccount(
+            bin: '970436',
+            bankName: 'Vietcombank',
+            accountNumber: '0000000002',
+            holderName: 'TAI KHOAN MAU MINH',
           ),
-          Member(
-            id: _lan,
-            name: 'Lan',
-            bank: BankAccount(
-              bin: '970407',
-              bankName: 'Techcombank',
-              accountNumber: '0000000003',
-              holderName: 'TAI KHOAN MAU LAN',
-            ),
+        ),
+        Member(
+          id: _lan,
+          name: 'Lan',
+          bank: BankAccount(
+            bin: '970407',
+            bankName: 'Techcombank',
+            accountNumber: '0000000003',
+            holderName: 'TAI KHOAN MAU LAN',
           ),
-          Member(id: _hung, name: 'Hùng'),
-        ],
-      ),
-      currentUserId: _me,
+        ),
+        Member(id: _hung, name: 'Hùng'),
+      ],
+    );
+    final snapshot = GroupSnapshot(
+      group: group,
       expenses: [
         expense(
           payer: _minh,
@@ -190,6 +236,10 @@ class SampleGroupRepository implements GroupRepository {
           createdAt: now.subtract(const Duration(days: 4)),
         ),
       ],
+    );
+    return LedgerSnapshot(
+      me: group.members.firstWhere((m) => m.id == _me),
+      groups: [snapshot],
     );
   }
 }

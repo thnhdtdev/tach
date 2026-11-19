@@ -51,11 +51,19 @@ lib/
 
 ## Trạng thái hiện tại
 
-Giao diện MVP đã dựng xong và chạy bằng dữ liệu mẫu trong bộ nhớ
-(`lib/src/datasource/sample/`). Camera thật đã nối: ảnh chụp đi theo khoản chi
-nhưng chỉ giữ trong bộ nhớ. Chưa nối: Supabase, đăng nhập, widget màn hình
-chính. Các khoản mẫu có sẵn dùng ảnh minh họa vẽ sẵn; trên máy không có camera
-(trình giả lập), bản debug cho chụp ảnh mẫu.
+Giao diện MVP đã dựng xong. App chạy theo hai cách:
+
+- **Nối Supabase** (`--dart-define-from-file=.env`, xem
+  [supabase/README.md](supabase/README.md)): đăng nhập bằng tài khoản khách,
+  dữ liệu nhóm, khoản chi, bình luận, cảm xúc, trả nợ và ảnh lưu trên máy chủ
+  (`lib/src/datasource/supabase/`). Ảnh chụp được cắt vuông và nén trước khi
+  tải lên.
+- **Dữ liệu mẫu** (không truyền gì): mọi thứ chỉ sống trong bộ nhớ
+  (`lib/src/datasource/sample/`), dùng cho test và để xem giao diện.
+
+Chưa có: đăng nhập Apple, Google, số điện thoại; cập nhật tức thì khi người
+khác ghi khoản (hiện tải lại khi quay lại app); widget màn hình chính. Trên máy
+không có camera (trình giả lập), bản debug cho chụp ảnh mẫu.
 
 Font chữ là Montserrat, giấy phép SIL Open Font License
 (`assets/fonts/OFL.txt`).

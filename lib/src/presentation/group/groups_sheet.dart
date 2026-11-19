@@ -5,7 +5,8 @@ import '../../core/theme/app_colors.dart';
 import '../ledger/ledger_cubit.dart';
 import 'group_type_ui.dart';
 
-/// Kết quả chọn trong bảng nhóm: mở một nhóm có sẵn hoặc tạo nhóm mới.
+/// Kết quả chọn trong bảng nhóm: mở một nhóm có sẵn, tạo nhóm mới, hoặc vào
+/// nhóm của người khác bằng mã mời.
 sealed class GroupsSheetResult {
   const GroupsSheetResult();
 }
@@ -20,7 +21,12 @@ class CreateNewGroup extends GroupsSheetResult {
   const CreateNewGroup();
 }
 
-/// Bảng liệt kê các nhóm đang tham gia để chuyển nhóm hoặc tạo nhóm mới.
+class JoinWithCode extends GroupsSheetResult {
+  const JoinWithCode();
+}
+
+/// Bảng liệt kê các nhóm đang tham gia để chuyển nhóm, tạo nhóm mới hoặc vào
+/// nhóm bằng mã mời.
 class GroupsSheet extends StatelessWidget {
   const GroupsSheet({super.key});
 
@@ -90,12 +96,21 @@ class GroupsSheet extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
               child: OutlinedButton.icon(
                 onPressed: () =>
                     Navigator.of(context).pop(const CreateNewGroup()),
                 icon: const Icon(Icons.add, size: 20),
                 label: const Text('Tạo nhóm mới'),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 2, 24, 8),
+              child: TextButton(
+                onPressed: () =>
+                    Navigator.of(context).pop(const JoinWithCode()),
+                style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
+                child: const Text('Vào nhóm bằng mã mời'),
               ),
             ),
           ],

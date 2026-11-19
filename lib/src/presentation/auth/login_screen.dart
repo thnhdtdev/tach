@@ -1,31 +1,66 @@
-import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../dependency/injection.dart';
+import '../../services/auth/auth_service.dart';
+import '../group/join_group_sheet.dart';
 import '../widgets/tach_mark.dart';
 
-/// Màn đăng nhập.
-///
-/// Chưa nối dịch vụ đăng nhập thật: mọi lựa chọn đều vào thẳng nhóm mẫu.
-class LoginScreen extends StatelessWidget {
+/// Màn đăng nhập. Chỉ hiện những cách đăng nhập mà [AuthService] đang hỗ trợ.
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.onSignedIn});
 
   final VoidCallback onSignedIn;
 
-  Future<void> _enterInviteCode(BuildContext context) async {
-    final joined = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: TachColors.paper,
-      showDragHandle: true,
-      builder: (_) => const _InviteCodeSheet(),
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _auth = getIt<AuthService>();
+
+  /// Cách đăng nhập đang chạy; khóa các nút cho tới khi xong.
+  SignInMethod? _busy;
+  String? _error;
+
+  Future<void> _signIn(SignInMethod method) async {
+    setState(() {
+      _busy = method;
+      _error = null;
+    });
+    try {
+      await _auth.signIn(method);
+    } on SignInException catch (error) {
+      if (mounted) {
+        setState(() {
+          _busy = null;
+          _error = error.message;
+        });
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _busy = null);
+    widget.onSignedIn();
+  }
+
+  /// Người có mã mời: tạo tài khoản (nếu chưa có) rồi vào thẳng nhóm.
+  Future<void> _enterInviteCode() async {
+    final joined = await showJoinGroupSheet(
+      context,
+      beforeJoin: () async {
+        if (!_auth.isSignedIn) await _auth.signIn(_auth.methods.last);
+      },
     );
-    if (joined == true) onSignedIn();
+    if (joined && mounted) widget.onSignedIn();
   }
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final guestOnly =
+        _auth.methods.length == 1 && _auth.methods.single == SignInMethod.guest;
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -52,33 +87,30 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               const Spacer(flex: 4),
-              FilledButton.icon(
-                onPressed: onSignedIn,
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
+              if (_error != null) ...[
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: text.bodyMedium?.copyWith(color: TachColors.danger),
+                  ),
                 ),
-                icon: const Icon(Icons.apple, size: 22),
-                label: const Text('Tiếp tục với Apple'),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: onSignedIn,
-                icon: const Text(
-                  'G',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                const SizedBox(height: 12),
+              ],
+              for (final method in _auth.methods) ...[
+                _button(method),
+                const SizedBox(height: 10),
+              ],
+              if (guestOnly)
+                Text(
+                  'Chưa cần tài khoản. Dữ liệu gắn với máy này, xóa app là '
+                  'không vào lại được.',
+                  textAlign: TextAlign.center,
+                  style: text.bodySmall,
                 ),
-                label: const Text('Tiếp tục với Google'),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: onSignedIn,
-                icon: const Icon(Icons.phone_iphone_outlined, size: 20),
-                label: const Text('Tiếp tục với số điện thoại'),
-              ),
-              const SizedBox(height: 6),
               TextButton(
-                onPressed: () => _enterInviteCode(context),
+                onPressed: _busy == null ? _enterInviteCode : null,
                 style: TextButton.styleFrom(
                   foregroundColor: TachColors.mintDeep,
                   minimumSize: const Size(64, 48),
@@ -98,79 +130,36 @@ class LoginScreen extends StatelessWidget {
       ),
     );
   }
-}
 
-class _InviteCodeSheet extends StatefulWidget {
-  const _InviteCodeSheet();
-
-  @override
-  State<_InviteCodeSheet> createState() => _InviteCodeSheetState();
-}
-
-class _InviteCodeSheetState extends State<_InviteCodeSheet> {
-  final _code = TextEditingController();
-
-  @override
-  void dispose() {
-    _code.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        24,
-        0,
-        24,
-        24 + MediaQuery.viewInsetsOf(context).bottom,
+  Widget _button(SignInMethod method) {
+    final onPressed = _busy == null ? () => _signIn(method) : null;
+    return switch (method) {
+      SignInMethod.apple => FilledButton.icon(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+        ),
+        icon: const Icon(Icons.apple, size: 22),
+        label: const Text('Tiếp tục với Apple'),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Nhập mã mời', style: text.titleLarge),
-          const SizedBox(height: 6),
-          Text(
-            'Mã nằm trong link mời mà bạn cùng nhóm đã gửi.',
-            style: text.bodyMedium,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _code,
-            autofocus: true,
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
-              LengthLimitingTextInputFormatter(8),
-            ],
-            style: text.titleLarge?.copyWith(letterSpacing: 4),
-            decoration: InputDecoration(
-              hintText: 'Ví dụ TRO12',
-              hintStyle: text.titleLarge?.copyWith(
-                color: TachColors.inkSoft.withValues(alpha: 0.5),
-                letterSpacing: 0,
-                fontWeight: FontWeight.w400,
-              ),
-              filled: true,
-              fillColor: TachColors.mintWash.withValues(alpha: 0.5),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _code.text.trim().isEmpty
-                ? null
-                : () => Navigator.of(context).pop(true),
-            child: const Text('Vào nhóm'),
-          ),
-        ],
+      SignInMethod.google => OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: const Text(
+          'G',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        label: const Text('Tiếp tục với Google'),
       ),
-    );
+      SignInMethod.phone => OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: const Icon(Icons.phone_iphone_outlined, size: 20),
+        label: const Text('Tiếp tục với số điện thoại'),
+      ),
+      SignInMethod.guest => FilledButton(
+        onPressed: onPressed,
+        child: Text(_busy == method ? 'Đang vào…' : 'Bắt đầu dùng thử'),
+      ),
+    };
   }
 }

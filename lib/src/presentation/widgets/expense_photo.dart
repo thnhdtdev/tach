@@ -3,11 +3,14 @@ import 'dart:typed_data';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../dependency/injection.dart';
+import '../../services/photo/photo_loader.dart';
 
 /// Ảnh của một khoản chi, lấp đầy khung chứa nó.
 ///
-/// Ưu tiên ảnh vừa chụp ([photoBytes]), rồi tới ảnh mẫu (`sample:<tên>`), cuối
-/// cùng là ô thay thế cho khoản không có ảnh. Ảnh từ máy chủ sẽ nối vào đây.
+/// Ưu tiên ảnh vừa chụp ([photoBytes]), rồi tới ảnh trên máy chủ
+/// (`remote:<đường dẫn>`) hoặc ảnh mẫu (`sample:<tên>`), cuối cùng là ô thay thế
+/// cho khoản không có ảnh.
 class ExpensePhoto extends StatelessWidget {
   const ExpensePhoto({super.key, required this.photoUrl, this.photoBytes});
 
@@ -77,6 +80,9 @@ class ExpensePhoto extends StatelessWidget {
 
     final url = photoUrl;
     if (url == null) return const _NoPhoto();
+    if (url.startsWith(remotePhotoPrefix)) {
+      return _RemotePhoto(path: url.substring(remotePhotoPrefix.length));
+    }
 
     final sample = _samples[url] ?? _samples['sample:viewfinder']!;
     return LayoutBuilder(
@@ -96,6 +102,44 @@ class ExpensePhoto extends StatelessWidget {
               ),
           ],
         );
+      },
+    );
+  }
+}
+
+/// Ảnh nằm trong kho ảnh trên máy chủ: tải về rồi hiện, trong lúc chờ là một
+/// ô màu tối.
+class _RemotePhoto extends StatefulWidget {
+  const _RemotePhoto({required this.path});
+
+  final String path;
+
+  @override
+  State<_RemotePhoto> createState() => _RemotePhotoState();
+}
+
+class _RemotePhotoState extends State<_RemotePhoto> {
+  late Future<Uint8List?> _bytes = getIt<PhotoLoader>().load(widget.path);
+
+  @override
+  void didUpdateWidget(_RemotePhoto oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.path != widget.path) {
+      _bytes = getIt<PhotoLoader>().load(widget.path);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: _bytes,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const ColoredBox(color: TachColors.nightRaised);
+        }
+        final bytes = snapshot.data;
+        if (bytes == null) return const _NoPhoto();
+        return ExpensePhoto(photoUrl: null, photoBytes: bytes);
       },
     );
   }

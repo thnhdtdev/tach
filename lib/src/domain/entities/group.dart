@@ -60,6 +60,7 @@ class Group {
     required this.inviteCode,
     required this.createdBy,
     required this.members,
+    this.formerMembers = const [],
   });
 
   final String id;
@@ -74,7 +75,12 @@ class Group {
 
   /// Id người tạo nhóm. Chỉ người này được xóa nhóm.
   final String createdBy;
+
+  /// Người đang ở trong nhóm.
   final List<Member> members;
+
+  /// Người đã rời nhóm, giữ lại để các khoản cũ còn hiện tên họ.
+  final List<Member> formerMembers;
 
   /// Đổi tên không đổi [code], để nội dung chuyển khoản của nhóm giữ nguyên.
   Group copyWith({String? name, List<Member>? members}) => Group(
@@ -85,5 +91,6 @@ class Group {
     inviteCode: inviteCode,
     createdBy: createdBy,
     members: members ?? this.members,
+    formerMembers: formerMembers,
   );
 }

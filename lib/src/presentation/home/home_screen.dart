@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
@@ -9,6 +11,7 @@ import '../capture/capture_page.dart';
 import '../feed/expense_page.dart';
 import '../group/create_group_screen.dart';
 import '../group/groups_sheet.dart';
+import '../group/join_group_sheet.dart';
 import '../ledger/ledger_cubit.dart';
 import '../month/month_grid_screen.dart';
 import '../profile/profile_screen.dart';
@@ -26,8 +29,9 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _pages = PageController();
+  StreamSubscription<void>? _saveFailures;
   var _onFeed = false;
   var _capturing = false;
 
@@ -35,7 +39,35 @@ class _HomeScreenState extends State<HomeScreen> {
   var _swipeDx = 0.0;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _saveFailures = context.read<LedgerCubit>().saveFailures.listen((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Chưa lưu được thay đổi vừa rồi. Kiểm tra mạng rồi thử lại.',
+            ),
+          ),
+        );
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Quay lại app thì lấy các khoản người khác vừa ghi.
+    if (state == AppLifecycleState.resumed) {
+      context.read<LedgerCubit>().refresh();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _saveFailures?.cancel();
     _pages.dispose();
     super.dispose();
   }
@@ -85,6 +117,8 @@ class _HomeScreenState extends State<HomeScreen> {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const CreateGroupScreen()),
         );
+      case JoinWithCode():
+        if (!await showJoinGroupSheet(context)) return;
       case null:
         return;
     }
@@ -129,6 +163,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ? const Center(
                   child: CircularProgressIndicator(color: TachColors.mintLight),
                 )
+              : state.loadFailed
+              ? _LoadFailedView(
+                  onRetry: context.read<LedgerCubit>().retryLoad,
+                  onSignOut: widget.onSignOut,
+                )
               : GestureDetector(
                   behavior: HitTestBehavior.translucent,
                   onHorizontalDragStart: canSwipe ? (_) => _swipeDx = 0 : null,
@@ -145,6 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               builder: (_) => const CreateGroupScreen(),
                             ),
                           ),
+                          onJoinGroup: () => showJoinGroupSheet(context),
                         )
                       : Stack(
                           children: [
@@ -205,11 +245,13 @@ class _NoGroupView extends StatelessWidget {
     required this.state,
     required this.onOpenProfile,
     required this.onCreateGroup,
+    required this.onJoinGroup,
   });
 
   final LedgerState state;
   final VoidCallback onOpenProfile;
   final VoidCallback onCreateGroup;
+  final VoidCallback onJoinGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -252,7 +294,8 @@ class _NoGroupView extends StatelessWidget {
               padding: const EdgeInsets.only(right: 12),
               child: Text(
                 'Tạo một nhóm cho phòng trọ, chuyến đi hoặc gia đình để '
-                'bắt đầu ghi chi tiêu chung.',
+                'bắt đầu ghi chi tiêu chung, hoặc nhập mã mời để vào nhóm của '
+                'bạn bè.',
                 style: text.bodyLarge?.copyWith(
                   color: Colors.white.withValues(alpha: 0.72),
                 ),
@@ -265,6 +308,72 @@ class _NoGroupView extends StatelessWidget {
                 onPressed: onCreateGroup,
                 child: const Text('Tạo nhóm'),
               ),
+            ),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: OutlinedButton(
+                onPressed: onJoinGroup,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.4)),
+                ),
+                child: const Text('Nhập mã mời'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Màn chính khi lần tải đầu tiên không thành công.
+class _LoadFailedView extends StatelessWidget {
+  const _LoadFailedView({required this.onRetry, required this.onSignOut});
+
+  final VoidCallback onRetry;
+  final VoidCallback onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 0, 28, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Spacer(flex: 2),
+            Icon(
+              Icons.cloud_off_outlined,
+              size: 44,
+              color: Colors.white.withValues(alpha: 0.85),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Chưa tải được dữ liệu',
+              textAlign: TextAlign.center,
+              style: text.headlineMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Kiểm tra kết nối mạng rồi thử lại.',
+              textAlign: TextAlign.center,
+              style: text.bodyLarge?.copyWith(
+                color: Colors.white.withValues(alpha: 0.72),
+              ),
+            ),
+            const Spacer(flex: 3),
+            FilledButton(onPressed: onRetry, child: const Text('Thử lại')),
+            const SizedBox(height: 6),
+            TextButton(
+              onPressed: onSignOut,
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white.withValues(alpha: 0.85),
+                minimumSize: const Size(64, 48),
+              ),
+              child: const Text('Đăng xuất'),
             ),
           ],
         ),

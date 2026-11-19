@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -5,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/format/transfer_code.dart';
+import '../../core/ids/uuid.dart';
 import '../../core/theme/app_colors.dart';
 import '../../domain/entities/expense.dart';
 import '../../domain/entities/group.dart';
@@ -46,15 +48,26 @@ class LedgerState {
     required this.me,
     required this.ledgers,
     required this.currentGroupId,
+    this.loadFailed = false,
   });
 
   const LedgerState.loading()
     : isLoading = true,
+      loadFailed = false,
+      me = const Member(id: '', name: ''),
+      ledgers = const [],
+      currentGroupId = '';
+
+  /// Lần tải đầu tiên không thành công (thường do mất mạng); chưa có gì để hiện.
+  const LedgerState.loadFailed()
+    : isLoading = false,
+      loadFailed = true,
       me = const Member(id: '', name: ''),
       ledgers = const [],
       currentGroupId = '';
 
   final bool isLoading;
+  final bool loadFailed;
 
   /// Hồ sơ của người dùng. Tồn tại cả khi họ chưa ở nhóm nào.
   final Member me;
@@ -72,6 +85,9 @@ class LedgerState {
 
   List<Group> get groups => [for (final l in ledgers) l.group];
 
+  /// Tài khoản mới chưa đặt tên; cần hỏi tên trước khi vào app.
+  bool get needsName => !isLoading && !loadFailed && me.name.trim().isEmpty;
+
   /// `false` khi người dùng chưa ở nhóm nào (mới đăng ký hoặc đã rời hết).
   bool get hasGroup => ledgers.isNotEmpty;
 
@@ -82,8 +98,14 @@ class LedgerState {
   List<Expense> get expenses => _current.expenses;
   List<Settlement> get settlements => _current.settlements;
 
-  Member member(String id) =>
-      id == meId ? me : group.members.firstWhere((m) => m.id == id);
+  /// Hồ sơ của một người trong nhóm đang mở, kể cả người đã rời nhóm.
+  Member member(String id) {
+    if (id == meId) return me;
+    for (final m in group.members.followedBy(group.formerMembers)) {
+      if (m.id == id) return m;
+    }
+    return Member(id: id, name: 'Người cũ');
+  }
 
   /// Tên hiển thị: chính mình thì gọi là "Bạn".
   String displayName(String id) => id == meId ? 'Bạn' : member(id).name;
@@ -163,9 +185,22 @@ class LedgerState {
   }
 }
 
+/// Kết quả vào nhóm bằng mã mời.
+enum JoinGroupResult {
+  joined,
+
+  /// Không có nhóm nào dùng mã này.
+  notFound,
+
+  /// Không gọi được máy chủ.
+  failed,
+}
+
 /// Trạng thái các nhóm của người dùng và sổ chi tiêu của nhóm đang mở.
 ///
-/// Thay đổi hiện chỉ giữ trong bộ nhớ; khi có Supabase sẽ ghi qua repository.
+/// Mỗi thay đổi hiện ngay trên giao diện rồi mới ghi qua [GroupRepository].
+/// Ghi không được thì báo qua [saveFailures] và tải lại để về đúng dữ liệu
+/// đang có trên máy chủ.
 class LedgerCubit extends Cubit<LedgerState> {
   LedgerCubit(this._repository, {Random? random})
     : _random = random ?? Random(),
@@ -177,30 +212,107 @@ class LedgerCubit extends Cubit<LedgerState> {
 
   final GroupRepository _repository;
   final Random _random;
-  var _localId = 0;
 
-  String _newId(String prefix) => '$prefix-local-${_localId++}';
+  final _saveFailures = StreamController<void>.broadcast();
 
-  Future<void> load() async {
-    final snapshot = await _repository.loadCurrentGroup();
+  /// Phát một sự kiện mỗi khi một thay đổi không ghi được lên máy chủ.
+  Stream<void> get saveFailures => _saveFailures.stream;
+
+  /// Các lần ghi đang chờ, chạy lần lượt để giữ đúng thứ tự (ví dụ bình luận
+  /// chỉ ghi sau khi khoản chi của nó đã ghi xong).
+  Future<void> _writes = Future.value();
+
+  String _newId() => newUuid(_random);
+
+  @override
+  Future<void> close() async {
+    await _saveFailures.close();
+    return super.close();
+  }
+
+  /// Tải hồ sơ và mọi nhóm của người dùng. [openGroupId] là nhóm muốn mở sau
+  /// khi tải; mặc định giữ nhóm đang mở.
+  Future<void> load({String? openGroupId}) async {
+    final LedgerSnapshot snapshot;
+    try {
+      snapshot = await _repository.load();
+    } on Exception {
+      // Đang có dữ liệu thì giữ nguyên; chưa có gì thì báo để người dùng thử lại.
+      if (!isClosed && state.isLoading) emit(const LedgerState.loadFailed());
+      return;
+    }
     if (isClosed) return;
+
+    final ledgers = [
+      for (final g in snapshot.groups)
+        GroupLedger(
+          group: g.group,
+          expenses: [...g.expenses]
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+          settlements: g.settlements,
+        ),
+    ];
+    bool has(String? id) => ledgers.any((l) => l.group.id == id);
+    final wanted = has(openGroupId) ? openGroupId! : state.currentGroupId;
     emit(
       LedgerState(
         isLoading: false,
-        me: snapshot.group.members.firstWhere(
-          (m) => m.id == snapshot.currentUserId,
-        ),
-        currentGroupId: snapshot.group.id,
-        ledgers: [
-          GroupLedger(
-            group: snapshot.group,
-            expenses: [...snapshot.expenses]
-              ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
-            settlements: snapshot.settlements,
-          ),
-        ],
+        me: snapshot.me,
+        ledgers: ledgers,
+        currentGroupId: has(wanted)
+            ? wanted
+            : (ledgers.isEmpty ? '' : ledgers.first.group.id),
       ),
     );
+  }
+
+  /// Thử tải lại sau khi lần tải đầu không thành công.
+  Future<void> retryLoad() {
+    emit(const LedgerState.loading());
+    return load();
+  }
+
+  /// Lấy dữ liệu mới nhất từ máy chủ, ví dụ khi quay lại app. Với dữ liệu mẫu
+  /// thì không làm gì, vì tải lại sẽ xóa các thay đổi đang giữ trong bộ nhớ.
+  Future<void> refresh() async {
+    if (!_repository.persists || state.isLoading || state.loadFailed) return;
+    // Chờ các lần ghi đang dở để không tải về bản cũ hơn giao diện.
+    await _writes;
+    await load();
+  }
+
+  /// Về trạng thái chưa tải, dùng khi đăng xuất.
+  void reset() => emit(const LedgerState.loading());
+
+  /// Ghi một thay đổi lên máy chủ sau khi giao diện đã cập nhật.
+  void _save(Future<void> Function() write) {
+    _writes = _writes.then((_) async {
+      try {
+        await write();
+      } on Exception {
+        if (isClosed) return;
+        _saveFailures.add(null);
+        await load();
+      }
+    });
+  }
+
+  /// Vào nhóm bằng mã mời rồi mở nhóm đó.
+  Future<JoinGroupResult> joinGroup(String inviteCode) async {
+    final String? groupId;
+    try {
+      groupId = await _repository.joinGroup(inviteCode.trim().toUpperCase());
+    } on Exception {
+      return JoinGroupResult.failed;
+    }
+    if (groupId == null) return JoinGroupResult.notFound;
+
+    if (_repository.persists || state.isLoading) {
+      await load(openGroupId: groupId);
+    } else {
+      switchGroup(groupId);
+    }
+    return JoinGroupResult.joined;
   }
 
   /// Ghi một khoản do chính người dùng trả, chia đều cho [participantIds].
@@ -211,8 +323,9 @@ class LedgerCubit extends Cubit<LedgerState> {
     String? photoUrl,
     Uint8List? photoBytes,
   }) {
+    final groupId = state.currentGroupId;
     final expense = Expense(
-      id: _newId('e'),
+      id: _newId(),
       payerId: state.meId,
       amount: amount,
       note: note,
@@ -226,6 +339,7 @@ class LedgerCubit extends Cubit<LedgerState> {
       createdAt: DateTime.now(),
     );
     emit(state.copyWith(expenses: [expense, ...state.expenses]));
+    _save(() => _repository.addExpense(groupId, expense));
     return expense;
   }
 
@@ -258,25 +372,23 @@ class LedgerCubit extends Cubit<LedgerState> {
       }
       return expense.copyWith(reactions: reactions);
     });
+    _save(() => _repository.setReaction(expenseId, emoji));
   }
 
   void addComment(String expenseId, String text, {String? parentId}) {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
+    final comment = Comment(
+      id: _newId(),
+      userId: state.meId,
+      parentId: parentId,
+      text: trimmed,
+      createdAt: DateTime.now(),
+    );
     _updateExpense(expenseId, (expense) {
-      return expense.copyWith(
-        comments: [
-          ...expense.comments,
-          Comment(
-            id: _newId('c'),
-            userId: state.meId,
-            parentId: parentId,
-            text: trimmed,
-            createdAt: DateTime.now(),
-          ),
-        ],
-      );
+      return expense.copyWith(comments: [...expense.comments, comment]);
     });
+    _save(() => _repository.addComment(expenseId, comment));
   }
 
   /// Hồ sơ của người dùng đi theo họ ở mọi nhóm, nên sửa ở tất cả các nhóm.
@@ -302,7 +414,9 @@ class LedgerCubit extends Cubit<LedgerState> {
   void renameGroup(String name) {
     final trimmed = name.trim();
     if (trimmed.isEmpty || !state.hasGroup) return;
+    final groupId = state.currentGroupId;
     emit(state.copyWith(group: state.group.copyWith(name: trimmed)));
+    _save(() => _repository.renameGroup(groupId, trimmed));
   }
 
   /// Rời nhóm đang mở rồi mở nhóm còn lại đầu tiên (nếu có).
@@ -310,7 +424,9 @@ class LedgerCubit extends Cubit<LedgerState> {
   /// Trả về `false` và không làm gì khi còn khoản chưa sòng phẳng.
   bool leaveGroup() {
     if (!state.canLeaveGroup) return false;
+    final groupId = state.currentGroupId;
     _closeCurrentGroup();
+    _save(() => _repository.leaveGroup(groupId));
     return true;
   }
 
@@ -320,12 +436,14 @@ class LedgerCubit extends Cubit<LedgerState> {
   /// hoặc nhóm còn khoản chưa trả xong.
   bool deleteGroup() {
     if (!state.canDeleteGroup) return false;
+    final groupId = state.currentGroupId;
     _closeCurrentGroup();
+    _save(() => _repository.deleteGroup(groupId));
     return true;
   }
 
-  /// Bỏ nhóm đang mở khỏi danh sách. Khi chỉ giữ dữ liệu trong bộ nhớ thì rời
-  /// và xóa giống nhau; với máy chủ, xóa còn gỡ nhóm ở mọi thành viên.
+  /// Bỏ nhóm đang mở khỏi danh sách trên máy này. Rời và xóa giống nhau ở đây;
+  /// trên máy chủ, xóa còn gỡ nhóm ở mọi thành viên.
   void _closeCurrentGroup() {
     final remaining = [
       for (final l in state.ledgers)
@@ -343,7 +461,7 @@ class LedgerCubit extends Cubit<LedgerState> {
   Group createGroup({required String name, required GroupType type}) {
     final trimmed = name.trim();
     final group = Group(
-      id: _newId('g'),
+      id: _newId(),
       name: trimmed,
       code: groupCodeFromName(trimmed),
       type: type,
@@ -360,6 +478,7 @@ class LedgerCubit extends Cubit<LedgerState> {
         GroupLedger(group: group),
       ], currentGroupId: group.id),
     );
+    _save(() => _repository.createGroup(group));
     return group;
   }
 
@@ -375,13 +494,25 @@ class LedgerCubit extends Cubit<LedgerState> {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return;
     _updateMe((me) => me.copyWith(name: trimmed));
+    _saveProfile();
   }
 
   /// Đặt tài khoản nhận tiền của người dùng; `null` để gỡ.
-  void setMyBank(BankAccount? bank) => _updateMe((me) => me.withBank(bank));
+  void setMyBank(BankAccount? bank) {
+    _updateMe((me) => me.withBank(bank));
+    _saveProfile();
+  }
+
+  void _saveProfile() {
+    final me = state.me;
+    _save(() => _repository.saveProfile(me));
+  }
 
   /// Đặt ảnh đại diện của người dùng; `null` để gỡ.
-  void setMyAvatar(Uint8List? bytes) => _updateMe((me) => me.withAvatar(bytes));
+  void setMyAvatar(Uint8List? bytes) {
+    _updateMe((me) => me.withAvatar(bytes));
+    _save(() => _repository.setAvatar(bytes));
+  }
 
   /// Nội dung chuyển khoản riêng cho khoản [transfer].
   String transferCodeFor(Transfer transfer) => buildTransferCode(
@@ -393,22 +524,18 @@ class LedgerCubit extends Cubit<LedgerState> {
   /// Người nợ báo đã chuyển; khoản này chờ người nhận xác nhận.
   void markTransferred(Transfer transfer) {
     if (state.pendingFor(transfer) != null) return;
-    emit(
-      state.copyWith(
-        settlements: [
-          ...state.settlements,
-          Settlement(
-            id: _newId('s'),
-            fromId: transfer.fromId,
-            toId: transfer.toId,
-            amount: transfer.amount,
-            transferCode: transferCodeFor(transfer),
-            status: SettlementStatus.pending,
-            createdAt: DateTime.now(),
-          ),
-        ],
-      ),
+    final groupId = state.currentGroupId;
+    final settlement = Settlement(
+      id: _newId(),
+      fromId: transfer.fromId,
+      toId: transfer.toId,
+      amount: transfer.amount,
+      transferCode: transferCodeFor(transfer),
+      status: SettlementStatus.pending,
+      createdAt: DateTime.now(),
     );
+    emit(state.copyWith(settlements: [...state.settlements, settlement]));
+    _save(() => _repository.addSettlement(groupId, settlement));
   }
 
   /// Người nhận xác nhận đã nhận tiền.
@@ -424,5 +551,6 @@ class LedgerCubit extends Cubit<LedgerState> {
         ],
       ),
     );
+    _save(() => _repository.confirmSettlement(settlementId));
   }
 }

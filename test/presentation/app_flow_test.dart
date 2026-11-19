@@ -1062,6 +1062,51 @@ void main() {
     });
 
     testWidgets(
+      'gõ ghi chú: bàn phím chữ mở thì cất bàn phím số, khung ảnh vẫn rộng',
+      (tester) async {
+        await _launch(tester);
+        await _signIn(tester);
+        await tester.tap(find.bySemanticsLabel('Chụp'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('50k'));
+        await tester.pump();
+        expect(find.byKey(const ValueKey('key-0')), findsOneWidget);
+
+        // Chọn ô ghi chú: bàn phím chữ của máy (cao 336) trượt lên.
+        await tester.tap(find.byType(TextField));
+        tester.view.viewInsets = const FakeViewPadding(bottom: 336 * 3);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('key-0')), findsNothing);
+        expect(find.text('15k'), findsNothing);
+        final photo = tester.getRect(find.byType(ExpensePhoto));
+        expect(photo.width, moreOrLessEquals(photo.height, epsilon: 0.5));
+        expect(photo.width, greaterThan(300));
+        expect(photo.bottom, lessThanOrEqualTo(844 - 336));
+
+        await tester.enterText(find.byType(TextField), 'Thêm màn hình');
+        await tester.pump();
+
+        // Bấm xong trên bàn phím: bàn phím số quay lại, số tiền và ghi chú còn.
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        tester.view.viewInsets = FakeViewPadding.zero;
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('key-0')), findsOneWidget);
+        expect(find.bySemanticsLabel('Số tiền 50.000đ'), findsOneWidget);
+        expect(find.text('Thêm màn hình'), findsOneWidget);
+
+        // Chạm vào ảnh cũng cất bàn phím chữ.
+        await tester.tap(find.byType(TextField));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('key-0')), findsNothing);
+        await tester.tapAt(
+          tester.getTopLeft(find.byType(ExpensePhoto)) + const Offset(30, 30),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('key-0')), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'máy nhỏ: bàn phím số hiện mà khung ảnh vẫn vuông, không tràn',
       (tester) async {
         await _launch(tester);

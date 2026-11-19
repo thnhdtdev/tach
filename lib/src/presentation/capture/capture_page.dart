@@ -117,6 +117,13 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Vẽ lại khi ô ghi chú được chọn hoặc thôi chọn, để đổi giữa bàn phím số
+    // của app và bàn phím chữ của máy.
+    _noteFocus.addListener(_onNoteFocusChanged);
+  }
+
+  void _onNoteFocusChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -358,7 +365,9 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final cubit = context.read<LedgerCubit>();
     final state = context.watch<LedgerCubit>().state;
-    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    // Đang gõ ghi chú thì bàn phím chữ của máy đã chiếm nửa dưới màn hình; cất
+    // bàn phím số đi để khung ảnh không bị ép nhỏ.
+    final typingNote = _noteFocus.hasFocus;
 
     return SafeArea(
       child: Column(
@@ -452,7 +461,7 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
             child: switch (_stage) {
               _Stage.viewfinder => _viewfinderControls(state),
               _Stage.amount =>
-                keyboardOpen
+                typingNote
                     ? const SizedBox(width: double.infinity, height: 12)
                     : _amountControls(),
               _Stage.people => _peopleControls(cubit, state),
@@ -613,72 +622,78 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     final big = text.displayLarge!.copyWith(shadows: shadow);
     final dim = big.copyWith(color: Colors.white.withValues(alpha: 0.55));
 
-    return DecoratedBox(
-      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.28)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Semantics(
-              container: true,
-              label: 'Số tiền ${formatVnd(_amount)}',
-              excludeSemantics: true,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: _digits.isEmpty
-                    ? Text('0đ', style: dim)
-                    : Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: formatThousands(int.parse(_digits)),
-                              style: big,
-                            ),
-                            TextSpan(text: '.000đ', style: dim),
-                          ],
+    // Chạm vào ảnh (ngoài ô ghi chú) thì cất bàn phím chữ, quay lại gõ số tiền.
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _noteFocus.unfocus,
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.28)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Semantics(
+                container: true,
+                label: 'Số tiền ${formatVnd(_amount)}',
+                excludeSemantics: true,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: _digits.isEmpty
+                      ? Text('0đ', style: dim)
+                      : Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: formatThousands(int.parse(_digits)),
+                                style: big,
+                              ),
+                              TextSpan(text: '.000đ', style: dim),
+                            ],
+                          ),
                         ),
-                      ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            if (editing)
-              Container(
-                constraints: const BoxConstraints(maxWidth: 260),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  borderRadius: BorderRadius.circular(22),
                 ),
-                child: TextField(
-                  controller: _note,
-                  focusNode: _noteFocus,
-                  textAlign: TextAlign.center,
-                  textCapitalization: TextCapitalization.sentences,
-                  inputFormatters: [LengthLimitingTextInputFormatter(40)],
-                  style: text.titleMedium,
-                  cursorColor: TachColors.mintLight,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 11,
-                    ),
-                    hintText: 'Thêm ghi chú',
-                    hintStyle: text.titleMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontWeight: FontWeight.w400,
+              ),
+              const SizedBox(height: 10),
+              if (editing)
+                Container(
+                  constraints: const BoxConstraints(maxWidth: 260),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: TextField(
+                    controller: _note,
+                    focusNode: _noteFocus,
+                    textAlign: TextAlign.center,
+                    textCapitalization: TextCapitalization.sentences,
+                    textInputAction: TextInputAction.done,
+                    inputFormatters: [LengthLimitingTextInputFormatter(40)],
+                    style: text.titleMedium,
+                    cursorColor: TachColors.mintLight,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 11,
+                      ),
+                      hintText: 'Thêm ghi chú',
+                      hintStyle: text.titleMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                   ),
+                )
+              else if (_note.text.trim().isNotEmpty)
+                Text(
+                  _note.text.trim(),
+                  textAlign: TextAlign.center,
+                  style: text.titleLarge?.copyWith(shadows: shadow),
                 ),
-              )
-            else if (_note.text.trim().isNotEmpty)
-              Text(
-                _note.text.trim(),
-                textAlign: TextAlign.center,
-                style: text.titleLarge?.copyWith(shadows: shadow),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

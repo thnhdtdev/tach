@@ -45,6 +45,36 @@ class _FakeCamera implements CaptureCamera {
   bool? flashOn;
   var front = false;
   var twoLenses = true;
+  var topZoom = 5.0;
+
+  /// Các mức zoom app đã gửi xuống camera, theo thứ tự.
+  final zooms = <double>[];
+
+  /// Máy có thêm ống kính góc siêu rộng ở camera sau.
+  var ultraWideLens = false;
+  var ultraWide = false;
+
+  @override
+  double get minZoom => ultraWide ? 0.5 : 1;
+
+  @override
+  double get maxZoom => ultraWide ? 0.9 : topZoom;
+
+  @override
+  bool get hasUltraWide => ultraWideLens && !front;
+
+  @override
+  bool get isUltraWide => ultraWide;
+
+  @override
+  Future<CameraStatus> useUltraWide(bool on) async {
+    ultraWide = on;
+    opens++;
+    return status;
+  }
+
+  @override
+  Future<void> setZoom(double level) async => zooms.add(level);
 
   @override
   bool get canFlip => twoLenses;
@@ -62,6 +92,7 @@ class _FakeCamera implements CaptureCamera {
 
   @override
   Future<CameraStatus> open() async {
+    ultraWide = false;
     opens++;
     return status;
   }
@@ -953,5 +984,223 @@ void main() {
         expect(photo.width, greaterThan(180));
       },
     );
+
+    testWidgets('nút zoom: bấm lên 2×, bấm nữa về 1×, đổi camera thì về 1×', (
+      tester,
+    ) async {
+      await _launch(tester);
+      await _signIn(tester);
+
+      // Nút nằm ở góc trên bên phải khung ngắm.
+      final frame = tester.getRect(find.byKey(const ValueKey('live-preview')));
+      final button = tester.getCenter(find.bySemanticsLabel('Zoom 1×'));
+      expect(button.dx, greaterThan(frame.center.dx + frame.width / 4));
+      expect(button.dy, lessThan(frame.center.dy - frame.height / 4));
+
+      await tester.tap(find.bySemanticsLabel('Zoom 1×'));
+      await tester.pumpAndSettle();
+      expect(_camera.zooms, [2.0]);
+
+      await tester.tap(find.bySemanticsLabel('Zoom 2×'));
+      await tester.pumpAndSettle();
+      expect(_camera.zooms, [2.0, 1.0]);
+
+      await tester.tap(find.bySemanticsLabel('Zoom 1×'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Đổi sang camera trước'));
+      await tester.pumpAndSettle();
+      // Camera mới mở ở mức 1, nút phải quay về 1×.
+      expect(find.bySemanticsLabel('Zoom 1×'), findsOneWidget);
+      expect(_camera.zooms, [2.0, 1.0, 2.0]);
+    });
+
+    testWidgets(
+      'chụm hai ngón tay để zoom: không trượt sang bảng tin, dừng ở mức tối đa',
+      (tester) async {
+        await _launch(tester);
+        await _signIn(tester);
+
+        final center = tester.getCenter(
+          find.byKey(const ValueKey('live-preview')),
+        );
+        final first = await tester.startGesture(
+          center - const Offset(0, 20),
+          pointer: 1,
+        );
+        final second = await tester.startGesture(
+          center + const Offset(0, 20),
+          pointer: 2,
+        );
+        await tester.pump();
+
+        // Hai ngón cách nhau 40 rồi 60: phóng 1,5 lần. Ngón kéo dọc, đúng
+        // hướng vuốt của bảng tin.
+        await second.moveBy(const Offset(0, 20));
+        await tester.pump();
+        expect(_camera.zooms.last, moreOrLessEquals(1.5, epsilon: 0.01));
+        expect(find.bySemanticsLabel('Zoom 1,5×'), findsOneWidget);
+        expect(find.bySemanticsLabel('Zoom 1×'), findsNothing);
+
+        await second.moveBy(const Offset(0, 300));
+        await tester.pump();
+        expect(_camera.zooms.last, 5.0);
+        expect(find.bySemanticsLabel('Zoom 5×'), findsOneWidget);
+
+        // Chụm lại sát nhau: về 1×, không xuống thấp hơn.
+        await second.moveBy(const Offset(0, -330));
+        await tester.pump();
+        expect(_camera.zooms.last, 1.0);
+
+        // Đang ở mức lẻ do chụm tay thì bấm nút là về 1×.
+        await second.moveBy(const Offset(0, 30));
+        await tester.pump();
+        await first.up();
+        await second.up();
+        await tester.pumpAndSettle();
+        expect(find.bySemanticsLabel('Zoom 1×'), findsNothing);
+        await tester.tap(find.bySemanticsLabel(RegExp(r'^Zoom ')));
+        await tester.pumpAndSettle();
+        expect(_camera.zooms.last, 1.0);
+        expect(find.bySemanticsLabel('Zoom 1×'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('live-preview')).hitTestable(),
+          findsOneWidget,
+        );
+        expect(
+          tester.getCenter(find.byKey(const ValueKey('live-preview'))),
+          center,
+        );
+      },
+    );
+
+    testWidgets(
+      'máy có ống kính góc siêu rộng: nút zoom xoay vòng 1× → 2× → 0,5× → 1×',
+      (tester) async {
+        await _launch(tester);
+        _camera.ultraWideLens = true;
+        await _signIn(tester);
+        final opens = _camera.opens;
+
+        await tester.tap(find.bySemanticsLabel('Zoom 1×'));
+        await tester.pumpAndSettle();
+        expect(_camera.zooms, [2.0]);
+        expect(_camera.opens, opens);
+
+        // 0,5× là một ống kính khác nên camera được mở lại.
+        await tester.tap(find.bySemanticsLabel('Zoom 2×'));
+        await tester.pumpAndSettle();
+        expect(_camera.ultraWide, isTrue);
+        expect(_camera.opens, opens + 1);
+        expect(find.bySemanticsLabel('Zoom 0,5×'), findsOneWidget);
+        expect(find.byKey(const ValueKey('live-preview')), findsOneWidget);
+
+        // Chụm hai ngón trên ống kính góc siêu rộng: dừng ở 0,9×, không tự
+        // nhảy sang ống kính chính.
+        final center = tester.getCenter(
+          find.byKey(const ValueKey('live-preview')),
+        );
+        final first = await tester.startGesture(
+          center - const Offset(0, 20),
+          pointer: 1,
+        );
+        final second = await tester.startGesture(
+          center + const Offset(0, 20),
+          pointer: 2,
+        );
+        await tester.pump();
+        await second.moveBy(const Offset(0, 200));
+        await tester.pump();
+        expect(_camera.zooms.last, 0.9);
+        expect(_camera.ultraWide, isTrue);
+        await first.up();
+        await second.up();
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.bySemanticsLabel('Zoom 0,9×'));
+        await tester.pumpAndSettle();
+        expect(_camera.ultraWide, isFalse);
+        expect(_camera.opens, opens + 2);
+        expect(find.bySemanticsLabel('Zoom 1×'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'đang ở 0,5× mà đổi sang camera trước: về 1×, không còn mức 0,5×',
+      (tester) async {
+        await _launch(tester);
+        _camera.ultraWideLens = true;
+        await _signIn(tester);
+
+        await tester.tap(find.bySemanticsLabel('Zoom 1×'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.bySemanticsLabel('Zoom 2×'));
+        await tester.pumpAndSettle();
+        expect(find.bySemanticsLabel('Zoom 0,5×'), findsOneWidget);
+
+        await tester.tap(find.byTooltip('Đổi sang camera trước'));
+        await tester.pumpAndSettle();
+        expect(_camera.ultraWide, isFalse);
+        expect(find.bySemanticsLabel('Zoom 1×'), findsOneWidget);
+
+        await tester.tap(find.bySemanticsLabel('Zoom 1×'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.bySemanticsLabel('Zoom 2×'));
+        await tester.pumpAndSettle();
+        expect(_camera.ultraWide, isFalse);
+        expect(find.bySemanticsLabel('Zoom 1×'), findsOneWidget);
+      },
+    );
+
+    testWidgets('vuốt một ngón trên khung ngắm vẫn sang bảng tin', (
+      tester,
+    ) async {
+      await _launch(tester);
+      await _signIn(tester);
+
+      await tester.drag(
+        find.byKey(const ValueKey('live-preview')),
+        const Offset(0, -500),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('live-preview')), findsNothing);
+      expect(_camera.zooms, isEmpty);
+    });
+
+    testWidgets('camera không zoom được thì không hiện nút zoom', (
+      tester,
+    ) async {
+      await _launch(tester);
+      _camera.topZoom = 1;
+      await _signIn(tester);
+
+      expect(find.bySemanticsLabel('Chụp'), findsOneWidget);
+      expect(find.bySemanticsLabel('Zoom 1×'), findsNothing);
+    });
+
+    testWidgets('máy không có camera (bản debug): ảnh mẫu cũng phóng to được', (
+      tester,
+    ) async {
+      await _launch(tester, cameraStatus: CameraStatus.unavailable);
+      await _signIn(tester);
+      final before = tester.getRect(find.byType(ExpensePhoto));
+
+      await tester.tap(find.bySemanticsLabel('Zoom 1×'));
+      await tester.pumpAndSettle();
+      final after = tester.getRect(find.byType(ExpensePhoto));
+      expect(after.width, moreOrLessEquals(before.width * 2, epsilon: 0.5));
+      expect(_camera.zooms, isEmpty);
+
+      // Ảnh mẫu cũng có mức 0,5× để thử đủ vòng của nút zoom.
+      await tester.tap(find.bySemanticsLabel('Zoom 2×'));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Zoom 0,5×'), findsOneWidget);
+      final wide = tester.getRect(find.byType(ExpensePhoto));
+      expect(wide.width, moreOrLessEquals(before.width / 2, epsilon: 0.5));
+
+      await tester.tap(find.bySemanticsLabel('Zoom 0,5×'));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Zoom 1×'), findsOneWidget);
+      expect(_camera.zooms, isEmpty);
+    });
   });
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +14,7 @@ import '../ledger/ledger_cubit.dart';
 import '../widgets/expense_photo.dart';
 import '../widgets/member_avatar.dart';
 import 'amount_keypad.dart';
+import 'zoom_control.dart';
 
 enum _Stage { viewfinder, amount, people }
 
@@ -43,6 +45,11 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   /// Số tiền tối đa 999.999.000đ.
   static const _maxDigits = 6;
 
+  /// Ảnh mẫu trên máy không có camera cũng zoom được từ 0,5× đến 5×, để thử
+  /// thao tác zoom.
+  static const _sampleMinZoom = 0.5;
+  static const _sampleMaxZoom = 5.0;
+
   final _note = TextEditingController();
   final _noteFocus = FocusNode();
 
@@ -61,6 +68,12 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   var _digits = '';
   var _excluded = <String>{};
   var _flashOn = false;
+
+  /// Mức zoom của khung ngắm; 1 là không zoom.
+  var _zoom = 1.0;
+  var _pinchStartZoom = 1.0;
+  var _sendingZoom = false;
+  var _switchingLens = false;
   var _captures = 0;
   String? _toast;
   Timer? _toastTimer;
@@ -80,6 +93,25 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
 
   bool get _canShoot =>
       !_takingPhoto && (_cameraStatus == CameraStatus.ready || _useSamplePhoto);
+
+  double get _minZoom => switch (_cameraStatus) {
+    CameraStatus.ready => _camera.minZoom,
+    CameraStatus.unavailable when _useSamplePhoto => _sampleMinZoom,
+    _ => 1,
+  };
+
+  double get _maxZoom => switch (_cameraStatus) {
+    CameraStatus.ready => _camera.maxZoom,
+    CameraStatus.unavailable when _useSamplePhoto => _sampleMaxZoom,
+    _ => 1,
+  };
+
+  /// Có mức 0,5× (ống kính góc siêu rộng) để nút zoom chuyển tới không.
+  bool get _hasUltraWide => _cameraStatus == CameraStatus.ready
+      ? _camera.hasUltraWide
+      : _useSamplePhoto;
+
+  bool get _canZoom => _stage == _Stage.viewfinder && _maxZoom > _minZoom;
 
   @override
   void initState() {
@@ -108,7 +140,10 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       // Đang mở dở (ví dụ hộp xin quyền đang hiện) thì để yên; mở xong sẽ tự
       // kiểm tra lại bên dưới.
       if (_cameraStatus != CameraStatus.ready) return;
-      setState(() => _cameraStatus = CameraStatus.starting);
+      setState(() {
+        _cameraStatus = CameraStatus.starting;
+        _zoom = 1;
+      });
       await _camera.close();
       return;
     }
@@ -119,7 +154,10 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   /// Đổi giữa camera trước và sau.
   Future<void> _flipCamera() async {
     if (!_canFlip) return;
-    setState(() => _cameraStatus = CameraStatus.starting);
+    setState(() {
+      _cameraStatus = CameraStatus.starting;
+      _zoom = 1;
+    });
     await _openWith(_camera.flip);
   }
 
@@ -136,7 +174,11 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       await _camera.close();
       return;
     }
-    setState(() => _cameraStatus = status);
+    // Ống kính vừa mở luôn ở mức zoom nhỏ nhất của nó.
+    setState(() {
+      _cameraStatus = status;
+      _zoom = status == CameraStatus.ready ? _camera.minZoom : 1;
+    });
 
     if (status == CameraStatus.ready && _flashOn) {
       // Camera trước thường không có đèn flash; khi đó tắt nút flash theo.
@@ -207,6 +249,58 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       }
     }
     setState(() => _flashOn = wanted);
+  }
+
+  /// Nút zoom xoay vòng 1× → 2× → 0,5× → 1×. Máy không có ống kính góc siêu
+  /// rộng thì bỏ qua mức 0,5×. Mức lẻ do chụm hai ngón tay tính như mức gần nó:
+  /// trên 1× thì coi như 2×, dưới 1× thì coi như 0,5×.
+  void _toggleZoom() {
+    if (formatZoom(_zoom) == '1×') {
+      _setZoom(math.min(2, _maxZoom));
+    } else if (_zoom < 1) {
+      _useUltraWide(false);
+    } else if (_hasUltraWide) {
+      _useUltraWide(true);
+    } else {
+      _setZoom(1);
+    }
+  }
+
+  /// Chuyển giữa ống kính chính (từ 1×) và ống kính góc siêu rộng (0,5×).
+  Future<void> _useUltraWide(bool on) async {
+    if (_cameraStatus != CameraStatus.ready) {
+      // Ảnh mẫu không có ống kính nào để đổi, chỉ cần đổi mức zoom.
+      _setZoom(on ? _sampleMinZoom : 1);
+      return;
+    }
+    if (_openingCamera || _takingPhoto) return;
+    setState(() {
+      _cameraStatus = CameraStatus.starting;
+      _switchingLens = true;
+      _zoom = on ? 0.5 : 1;
+    });
+    await _openWith(() => _camera.useUltraWide(on));
+    if (mounted) setState(() => _switchingLens = false);
+  }
+
+  void _setZoom(double value) {
+    final zoom = value.clamp(_minZoom, _maxZoom).toDouble();
+    if (zoom == _zoom) return;
+    setState(() => _zoom = zoom);
+    _sendZoom();
+  }
+
+  /// Gửi mức zoom mới nhất xuống camera, mỗi lúc một lệnh: chụm hai ngón tay
+  /// phát ra nhiều mức hơn camera kịp nhận.
+  Future<void> _sendZoom() async {
+    if (_sendingZoom) return;
+    _sendingZoom = true;
+    double? sent;
+    while (mounted && _cameraStatus == CameraStatus.ready && sent != _zoom) {
+      sent = _zoom;
+      await _camera.setZoom(sent);
+    }
+    _sendingZoom = false;
   }
 
   void _showToast(String message) {
@@ -280,44 +374,71 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                   aspectRatio: 1,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(28),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (_stage != _Stage.viewfinder)
-                          ExpensePhoto(
-                            photoUrl: _photoUrl,
-                            photoBytes: _photoBytes,
-                          )
-                        else if (_cameraStatus == CameraStatus.ready)
-                          _camera.preview()
-                        else
-                          const ExpensePhoto(photoUrl: 'sample:viewfinder'),
-                        if (_stage == _Stage.viewfinder) ...[
-                          const _FocusBrackets(),
-                          if (_cameraNotice() case final notice?)
-                            _CameraNotice(notice: notice),
-                        ],
-                        if (_stage != _Stage.viewfinder)
-                          _amountOnPhoto(context),
-                        if (_captures > 0)
-                          IgnorePointer(
-                            // Khóa đặt ở widget ngoài cùng để hiệu ứng chớp không
-                            // chạy lại khi các lớp khác trong Stack đổi chỗ.
-                            key: ValueKey(_captures),
-                            child: TweenAnimationBuilder<double>(
-                              tween: Tween(begin: 0.85, end: 0),
-                              duration: const Duration(milliseconds: 260),
-                              builder: (_, opacity, _) => ColoredBox(
-                                color: Colors.white.withValues(alpha: opacity),
+                    child: PinchZoomDetector(
+                      enabled: _canZoom,
+                      onStart: () => _pinchStartZoom = _zoom,
+                      onScale: (scale) => _setZoom(_pinchStartZoom * scale),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (_stage != _Stage.viewfinder)
+                            ExpensePhoto(
+                              photoUrl: _photoUrl,
+                              photoBytes: _photoBytes,
+                            )
+                          else if (_cameraStatus == CameraStatus.ready)
+                            _camera.preview()
+                          else
+                            Transform.scale(
+                              // Ảnh mẫu vừa khít khung ở mức nhỏ nhất.
+                              scale: _useSamplePhoto
+                                  ? _zoom / _sampleMinZoom
+                                  : 1,
+                              child: const ExpensePhoto(
+                                photoUrl: 'sample:viewfinder',
                               ),
                             ),
-                          ),
-                        if (_toast != null)
-                          Align(
-                            alignment: Alignment.topCenter,
-                            child: _Toast(message: _toast!),
-                          ),
-                      ],
+                          if (_stage == _Stage.viewfinder) ...[
+                            const _FocusBrackets(),
+                            if (_cameraNotice() case final notice?)
+                              _CameraNotice(notice: notice),
+                            // Giữ nút trong lúc đổi ống kính để nó không chớp
+                            // tắt; nút nằm lọt trong góc ngắm trên bên phải.
+                            if (_canZoom || _switchingLens)
+                              Positioned(
+                                top: 30,
+                                right: 30,
+                                child: ZoomButton(
+                                  zoom: _zoom,
+                                  onPressed: _toggleZoom,
+                                ),
+                              ),
+                          ],
+                          if (_stage != _Stage.viewfinder)
+                            _amountOnPhoto(context),
+                          if (_captures > 0)
+                            IgnorePointer(
+                              // Khóa đặt ở widget ngoài cùng để hiệu ứng chớp
+                              // không chạy lại khi các lớp khác trong Stack đổi
+                              // chỗ.
+                              key: ValueKey(_captures),
+                              child: TweenAnimationBuilder<double>(
+                                tween: Tween(begin: 0.85, end: 0),
+                                duration: const Duration(milliseconds: 260),
+                                builder: (_, opacity, _) => ColoredBox(
+                                  color: Colors.white.withValues(
+                                    alpha: opacity,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (_toast != null)
+                            Align(
+                              alignment: Alignment.bottomCenter,
+                              child: _Toast(message: _toast!),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -904,7 +1025,7 @@ class _Toast extends StatelessWidget {
     return Semantics(
       liveRegion: true,
       child: Container(
-        margin: const EdgeInsets.only(top: 16),
+        margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.72),

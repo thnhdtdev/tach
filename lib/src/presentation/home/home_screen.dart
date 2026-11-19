@@ -9,6 +9,7 @@ import '../../core/theme/app_theme.dart';
 import '../balance/balance_screen.dart';
 import '../capture/capture_page.dart';
 import '../feed/expense_page.dart';
+import '../feed/feed_background.dart';
 import '../group/create_group_screen.dart';
 import '../group/groups_sheet.dart';
 import '../group/join_group_sheet.dart';
@@ -29,6 +30,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _pages = PageController();
+  final _photoColors = PhotoColors();
   StreamSubscription<void>? _saveFailures;
   var _onFeed = false;
   var _capturing = false;
@@ -65,6 +67,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _saveFailures?.cancel();
     _pages.dispose();
+    _photoColors.dispose();
     super.dispose();
   }
 
@@ -180,6 +183,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         )
                       : Stack(
                           children: [
+                            Positioned.fill(
+                              child: FeedBackground(
+                                pages: _pages,
+                                colors: _photoColors,
+                                expenses: state.expenses,
+                              ),
+                            ),
                             PageView.builder(
                               controller: _pages,
                               scrollDirection: Axis.vertical,

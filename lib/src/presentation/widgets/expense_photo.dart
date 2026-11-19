@@ -51,6 +51,11 @@ class ExpensePhoto extends StatelessWidget {
     'sample:viewfinder': _Sample(Color(0xFF6F7F7A), Color(0xFF1E2A27), null),
   };
 
+  static Color sampleColor(String photoUrl) {
+    final sample = _samples[photoUrl] ?? _samples['sample:viewfinder']!;
+    return Color.lerp(sample.light, sample.dark, 0.5)!;
+  }
+
   @override
   Widget build(BuildContext context) {
     final bytes = photoBytes;

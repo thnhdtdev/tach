@@ -238,7 +238,8 @@ class ExpensePage extends StatelessWidget {
             child: Container(
               height: 48,
               decoration: BoxDecoration(
-                color: TachColors.nightRaised,
+                // Trắng mờ thay cho xám đặc để thanh ngả theo màu nền của ảnh.
+                color: Colors.white.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Row(

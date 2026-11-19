@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tach/src/app.dart';
+import 'package:tach/src/core/theme/app_colors.dart';
 import 'package:tach/src/dependency/injection.dart';
 import 'package:tach/src/domain/entities/group.dart';
 import 'package:tach/src/services/avatar/avatar_picker.dart';
@@ -245,6 +246,13 @@ void main() {
     expect(find.textContaining(' trả'), findsNothing);
     expect(find.text('30.000đ'), findsOneWidget);
     expect(find.textContaining('Bạn nợ 7.500đ'), findsOneWidget);
+
+    final background = tester.widget<DecoratedBox>(
+      find.byKey(const ValueKey('feed-background')),
+    );
+    final gradient =
+        (background.decoration as BoxDecoration).gradient! as LinearGradient;
+    expect(gradient.colors, everyElement(isNot(TachColors.night)));
 
     await tester.tap(find.byTooltip('Số dư'));
     await tester.pumpAndSettle();

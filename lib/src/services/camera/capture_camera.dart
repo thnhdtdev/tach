@@ -140,10 +140,13 @@ class PluginCaptureCamera implements CaptureCamera {
       _hasUltraWide = ultraWide != null && ultraWide != main;
       if (!_hasUltraWide) _ultraWide = false;
       final chosen = _ultraWide ? ultraWide! : main;
+      // 1080p: ảnh vuông cắt ra được 1080 điểm ảnh mỗi cạnh, vừa khít khung ảnh
+      // trên màn hình điện thoại. Mức 720p thấp hơn làm ảnh bị kéo giãn và mờ;
+      // mức cao hơn làm hình xem trực tiếp nặng máy mà mắt không thấy khác.
       // Tắt âm thanh để không phải xin quyền micro; app chỉ chụp ảnh.
       final controller = CameraController(
         chosen,
-        ResolutionPreset.high,
+        ResolutionPreset.veryHigh,
         enableAudio: false,
       );
       await controller.initialize();

@@ -5,13 +5,13 @@ import 'dart:ui' as ui;
 import 'package:image/image.dart' as img;
 
 /// Cắt ảnh thành hình vuông ở giữa, thu về [side] điểm ảnh mỗi cạnh rồi nén
-/// JPEG. Ảnh từ camera nặng vài MB; sau bước này còn khoảng 100–200 KB.
+/// JPEG. Ảnh từ camera nặng cỡ 1 MB; sau bước này còn khoảng 150–250 KB.
 ///
 /// Ném [Exception] nếu dữ liệu không phải ảnh đọc được.
 Future<Uint8List> squareJpeg(
   Uint8List bytes, {
   int side = 1080,
-  int quality = 80,
+  int quality = 85,
 }) async {
   final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
   final descriptor = await ui.ImageDescriptor.encoded(buffer);

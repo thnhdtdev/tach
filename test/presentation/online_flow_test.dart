@@ -93,11 +93,7 @@ class _NoCamera implements CaptureCamera {
   @override
   double get maxZoom => 1;
   @override
-  bool get hasUltraWide => false;
-  @override
-  bool get isUltraWide => false;
-  @override
-  Future<CameraStatus> useUltraWide(bool on) => open();
+  double get zoom => 1;
   @override
   Future<CameraStatus> open() async => CameraStatus.denied;
   @override
@@ -109,7 +105,7 @@ class _NoCamera implements CaptureCamera {
   @override
   Future<bool> setFlash(bool on) async => false;
   @override
-  Future<void> setZoom(double level) async {}
+  Future<CameraStatus> setZoom(double level) => open();
   @override
   Future<void> close() async {}
 }

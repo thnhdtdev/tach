@@ -45,10 +45,10 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   /// Số tiền tối đa 999.999.000đ.
   static const _maxDigits = 6;
 
-  /// Ảnh mẫu trên máy không có camera cũng zoom được từ 0,5× đến 5×, để thử
+  /// Ảnh mẫu trên máy không có camera cũng zoom được từ 0,5× đến 6×, để thử
   /// thao tác zoom.
   static const _sampleMinZoom = 0.5;
-  static const _sampleMaxZoom = 5.0;
+  static const _sampleMaxZoom = 6.0;
 
   final _note = TextEditingController();
   final _noteFocus = FocusNode();
@@ -73,7 +73,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   var _zoom = 1.0;
   var _pinchStartZoom = 1.0;
   var _sendingZoom = false;
-  var _switchingLens = false;
   var _captures = 0;
   String? _toast;
   Timer? _toastTimer;
@@ -105,11 +104,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     CameraStatus.unavailable when _useSamplePhoto => _sampleMaxZoom,
     _ => 1,
   };
-
-  /// Có mức 0,5× (ống kính góc siêu rộng) để nút zoom chuyển tới không.
-  bool get _hasUltraWide => _cameraStatus == CameraStatus.ready
-      ? _camera.hasUltraWide
-      : _useSamplePhoto;
 
   bool get _canZoom => _stage == _Stage.viewfinder && _maxZoom > _minZoom;
 
@@ -181,10 +175,10 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       await _camera.close();
       return;
     }
-    // Ống kính vừa mở luôn ở mức zoom nhỏ nhất của nó.
+    // Camera vừa mở luôn ở 1×.
     setState(() {
       _cameraStatus = status;
-      _zoom = status == CameraStatus.ready ? _camera.minZoom : 1;
+      _zoom = 1;
     });
 
     if (status == CameraStatus.ready && _flashOn) {
@@ -262,34 +256,17 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   /// rộng thì bỏ qua mức 0,5×. Mức lẻ do chụm hai ngón tay tính như mức gần nó:
   /// trên 1× thì coi như 2×, dưới 1× thì coi như 0,5×.
   void _toggleZoom() {
-    if (formatZoom(_zoom) == '1×') {
+    final atOne = formatZoom(_zoom) == '1×';
+    if (atOne && _maxZoom > 1) {
       _setZoom(math.min(2, _maxZoom));
-    } else if (_zoom < 1) {
-      _useUltraWide(false);
-    } else if (_hasUltraWide) {
-      _useUltraWide(true);
+    } else if ((atOne || _zoom > 1) && _minZoom < 1) {
+      _setZoom(_minZoom);
     } else {
       _setZoom(1);
     }
   }
 
-  /// Chuyển giữa ống kính chính (từ 1×) và ống kính góc siêu rộng (0,5×).
-  Future<void> _useUltraWide(bool on) async {
-    if (_cameraStatus != CameraStatus.ready) {
-      // Ảnh mẫu không có ống kính nào để đổi, chỉ cần đổi mức zoom.
-      _setZoom(on ? _sampleMinZoom : 1);
-      return;
-    }
-    if (_openingCamera || _takingPhoto) return;
-    setState(() {
-      _cameraStatus = CameraStatus.starting;
-      _switchingLens = true;
-      _zoom = on ? 0.5 : 1;
-    });
-    await _openWith(() => _camera.useUltraWide(on));
-    if (mounted) setState(() => _switchingLens = false);
-  }
-
+  /// Đặt mức zoom của khung ngắm, từ nút zoom hoặc từ thao tác chụm hai ngón.
   void _setZoom(double value) {
     final zoom = value.clamp(_minZoom, _maxZoom).toDouble();
     if (zoom == _zoom) return;
@@ -298,16 +275,30 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   }
 
   /// Gửi mức zoom mới nhất xuống camera, mỗi lúc một lệnh: chụm hai ngón tay
-  /// phát ra nhiều mức hơn camera kịp nhận.
+  /// phát ra nhiều mức hơn camera kịp nhận, và qua mốc 1× camera còn phải đổi
+  /// ống kính.
   Future<void> _sendZoom() async {
     if (_sendingZoom) return;
     _sendingZoom = true;
     double? sent;
     while (mounted && _cameraStatus == CameraStatus.ready && sent != _zoom) {
       sent = _zoom;
-      await _camera.setZoom(sent);
+      final status = await _camera.setZoom(sent);
+      // Màn này đã bị che hoặc camera đã đóng trong lúc chờ thì thôi.
+      if (!mounted || _cameraStatus != CameraStatus.ready) break;
+      // Vẽ lại vì hình xem trực tiếp có thể vừa chuyển sang ống kính khác.
+      setState(() => _cameraStatus = status);
     }
     _sendingZoom = false;
+
+    // Ngón tay đã dừng: nút zoom hiện đúng mức camera đang dùng, ví dụ 1× khi
+    // người dùng thu nhỏ chưa đủ để sang ống kính góc siêu rộng.
+    if (mounted &&
+        _cameraStatus == CameraStatus.ready &&
+        sent == _zoom &&
+        _camera.zoom != _zoom) {
+      setState(() => _zoom = _camera.zoom);
+    }
   }
 
   void _showToast(String message) {
@@ -411,9 +402,8 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                             const _FocusBrackets(),
                             if (_cameraNotice() case final notice?)
                               _CameraNotice(notice: notice),
-                            // Giữ nút trong lúc đổi ống kính để nó không chớp
-                            // tắt; nút nằm lọt trong góc ngắm trên bên phải.
-                            if (_canZoom || _switchingLens)
+                            // Nằm lọt trong góc ngắm trên bên phải.
+                            if (_canZoom)
                               Positioned(
                                 top: 30,
                                 right: 30,

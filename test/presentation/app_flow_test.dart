@@ -10,6 +10,7 @@ import 'package:tach/src/dependency/injection.dart';
 import 'package:tach/src/domain/entities/group.dart';
 import 'package:tach/src/services/avatar/avatar_picker.dart';
 import 'package:tach/src/services/camera/capture_camera.dart';
+import 'package:tach/src/services/camera/zoom_plan.dart';
 import 'package:tach/src/presentation/home/home_screen.dart';
 import 'package:tach/src/presentation/ledger/ledger_cubit.dart';
 import 'package:tach/src/presentation/widgets/expense_photo.dart';
@@ -45,36 +46,44 @@ class _FakeCamera implements CaptureCamera {
   bool? flashOn;
   var front = false;
   var twoLenses = true;
-  var topZoom = 5.0;
+  var topZoom = 6.0;
 
-  /// Các mức zoom app đã gửi xuống camera, theo thứ tự.
+  /// Các mức zoom camera đã thật sự đặt, theo thứ tự.
   final zooms = <double>[];
 
   /// Máy có thêm ống kính góc siêu rộng ở camera sau.
   var ultraWideLens = false;
   var ultraWide = false;
+  var currentZoom = 1.0;
+
+  bool get _hasUltraWide => ultraWideLens && !front;
 
   @override
-  double get minZoom => ultraWide ? 0.5 : 1;
+  double get minZoom => _hasUltraWide ? 0.5 : 1;
 
   @override
-  double get maxZoom => ultraWide ? 0.9 : topZoom;
+  double get maxZoom => topZoom;
 
   @override
-  bool get hasUltraWide => ultraWideLens && !front;
+  double get zoom => currentZoom;
 
   @override
-  bool get isUltraWide => ultraWide;
-
-  @override
-  Future<CameraStatus> useUltraWide(bool on) async {
-    ultraWide = on;
-    opens++;
+  Future<CameraStatus> setZoom(double level) async {
+    final plan = planZoom(
+      level,
+      hasUltraWide: _hasUltraWide,
+      onUltraWide: ultraWide,
+      maxZoom: topZoom,
+    );
+    // Đổi ống kính là mở lại camera.
+    if (plan.ultraWide != ultraWide) {
+      ultraWide = plan.ultraWide;
+      opens++;
+    }
+    currentZoom = plan.zoom;
+    zooms.add(plan.zoom);
     return status;
   }
-
-  @override
-  Future<void> setZoom(double level) async => zooms.add(level);
 
   @override
   bool get canFlip => twoLenses;
@@ -93,6 +102,7 @@ class _FakeCamera implements CaptureCamera {
   @override
   Future<CameraStatus> open() async {
     ultraWide = false;
+    currentZoom = 1;
     opens++;
     return status;
   }
@@ -1183,8 +1193,8 @@ void main() {
 
         await second.moveBy(const Offset(0, 300));
         await tester.pump();
-        expect(_camera.zooms.last, 5.0);
-        expect(find.bySemanticsLabel('Zoom 5×'), findsOneWidget);
+        expect(_camera.zooms.last, 6.0);
+        expect(find.bySemanticsLabel('Zoom 6×'), findsOneWidget);
 
         // Chụm lại sát nhau: về 1×, không xuống thấp hơn.
         await second.moveBy(const Offset(0, -330));
@@ -1234,33 +1244,81 @@ void main() {
         expect(find.bySemanticsLabel('Zoom 0,5×'), findsOneWidget);
         expect(find.byKey(const ValueKey('live-preview')), findsOneWidget);
 
-        // Chụm hai ngón trên ống kính góc siêu rộng: dừng ở 0,9×, không tự
-        // nhảy sang ống kính chính.
-        final center = tester.getCenter(
-          find.byKey(const ValueKey('live-preview')),
-        );
-        final first = await tester.startGesture(
-          center - const Offset(0, 20),
-          pointer: 1,
-        );
-        final second = await tester.startGesture(
-          center + const Offset(0, 20),
-          pointer: 2,
-        );
-        await tester.pump();
-        await second.moveBy(const Offset(0, 200));
-        await tester.pump();
-        expect(_camera.zooms.last, 0.9);
-        expect(_camera.ultraWide, isTrue);
-        await first.up();
-        await second.up();
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.bySemanticsLabel('Zoom 0,9×'));
+        await tester.tap(find.bySemanticsLabel('Zoom 0,5×'));
         await tester.pumpAndSettle();
         expect(_camera.ultraWide, isFalse);
         expect(_camera.opens, opens + 2);
         expect(find.bySemanticsLabel('Zoom 1×'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'chụm hai ngón tay đi liền từ 0,5× tới 6×, camera tự đổi ống kính ở 1×',
+      (tester) async {
+        await _launch(tester);
+        _camera.ultraWideLens = true;
+        await _signIn(tester);
+        final opens = _camera.opens;
+
+        final center = tester.getCenter(
+          find.byKey(const ValueKey('live-preview')),
+        );
+        // Hai ngón đặt cách nhau 100, bắt đầu từ 1×.
+        final first = await tester.startGesture(
+          center - const Offset(0, 50),
+          pointer: 1,
+        );
+        final second = await tester.startGesture(
+          center + const Offset(0, 50),
+          pointer: 2,
+        );
+        await tester.pump();
+
+        // Thu nhỏ một chút (0,95×): chưa đủ để đổi ống kính, camera vẫn ở 1×.
+        await second.moveBy(const Offset(0, -5));
+        await tester.pumpAndSettle();
+        expect(_camera.ultraWide, isFalse);
+        expect(_camera.zooms.last, 1.0);
+        expect(find.bySemanticsLabel('Zoom 1×'), findsOneWidget);
+
+        // Thu nhỏ tiếp xuống 0,7×: sang ống kính góc siêu rộng.
+        await second.moveBy(const Offset(0, -25));
+        await tester.pumpAndSettle();
+        expect(_camera.ultraWide, isTrue);
+        expect(_camera.opens, opens + 1);
+        expect(_camera.zooms.last, moreOrLessEquals(0.7, epsilon: 0.01));
+        expect(find.bySemanticsLabel('Zoom 0,7×'), findsOneWidget);
+
+        // Chụm hết cỡ: dừng ở 0,5×.
+        await second.moveBy(const Offset(0, -60));
+        await tester.pumpAndSettle();
+        expect(_camera.zooms.last, 0.5);
+
+        // Tách ra tới 0,96×: vẫn ở góc siêu rộng, chưa đổi lại.
+        await second.moveBy(const Offset(0, 86));
+        await tester.pumpAndSettle();
+        expect(_camera.ultraWide, isTrue);
+        expect(_camera.opens, opens + 1);
+
+        // Qua 1× thì về ống kính chính, rồi phóng tiếp tới mức tối đa 6×.
+        await second.moveBy(const Offset(0, 104));
+        await tester.pumpAndSettle();
+        expect(_camera.ultraWide, isFalse);
+        expect(_camera.opens, opens + 2);
+        expect(_camera.zooms.last, moreOrLessEquals(2.0, epsilon: 0.01));
+
+        await second.moveBy(const Offset(0, 600));
+        await tester.pumpAndSettle();
+        expect(_camera.zooms.last, 6.0);
+        expect(find.bySemanticsLabel('Zoom 6×'), findsOneWidget);
+
+        await first.up();
+        await second.up();
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('live-preview')).hitTestable(),
+          findsOneWidget,
+        );
       },
     );
 

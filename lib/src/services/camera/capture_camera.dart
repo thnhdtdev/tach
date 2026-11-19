@@ -2,6 +2,8 @@ import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'zoom_plan.dart';
+
 enum CameraStatus {
   /// Đang mở, hoặc đang tạm nghỉ khi màn camera bị che.
   starting,
@@ -39,25 +41,23 @@ abstract interface class CaptureCamera {
   /// Bật hoặc tắt đèn flash khi chụp. Trả về `false` nếu máy không hỗ trợ.
   Future<bool> setFlash(bool on);
 
-  /// Mức zoom nhỏ nhất của ống kính đang mở: 1 với ống kính chính, 0,5 với
-  /// ống kính góc siêu rộng. Biết được sau [open].
+  /// Mức zoom nhỏ nhất của mặt camera đang dùng: 0,5 nếu có ống kính góc siêu
+  /// rộng, không thì 1. Biết được sau [open].
   double get minZoom;
 
-  /// Mức zoom lớn nhất của ống kính đang mở; bằng [minZoom] nếu không zoom được.
+  /// Mức zoom lớn nhất; bằng [minZoom] nếu camera không zoom được.
   double get maxZoom;
 
-  /// Đặt mức zoom, từ [minZoom] đến [maxZoom]. Ống kính vừa mở luôn ở [minZoom].
-  Future<void> setZoom(double level);
+  /// Mức zoom camera đang thật sự dùng. Camera vừa mở luôn ở 1×.
+  double get zoom;
 
-  /// Mặt camera đang dùng có thêm ống kính góc siêu rộng (0,5×) không.
-  bool get hasUltraWide;
-
-  /// Đang dùng ống kính góc siêu rộng.
-  bool get isUltraWide;
-
-  /// Chuyển giữa ống kính chính và ống kính góc siêu rộng rồi mở ống kính mới.
-  /// [open] và [flip] luôn quay về ống kính chính.
-  Future<CameraStatus> useUltraWide(bool on);
+  /// Đặt mức zoom, từ [minZoom] đến [maxZoom]. Qua mốc 1× camera tự đổi giữa
+  /// ống kính chính và ống kính góc siêu rộng, nên hình xem trực tiếp có thể
+  /// tắt một nhịp và [preview] cần được vẽ lại sau khi hàm này xong.
+  ///
+  /// Trả về trạng thái camera sau đó; khác [CameraStatus.ready] nếu ống kính
+  /// mới không mở được hoặc camera đã bị đóng giữa chừng.
+  Future<CameraStatus> setZoom(double level);
 
   /// Nhả camera để app khác dùng và đỡ tốn pin.
   Future<void> close();
@@ -67,42 +67,30 @@ abstract interface class CaptureCamera {
 class PluginCaptureCamera implements CaptureCamera {
   /// Camera cho zoom số tới vài chục lần, nhưng quá mức này ảnh vỡ hạt, không
   /// còn đọc được hóa đơn.
-  static const _zoomCap = 5.0;
-
-  /// Ống kính góc siêu rộng nhìn rộng gấp đôi ống kính chính.
-  static const _ultraWideFactor = 0.5;
-
-  /// Phóng ống kính góc siêu rộng tới 1× thì kém nét hơn ống kính chính, nên
-  /// dừng ngay trước đó.
-  static const _ultraWideZoomCap = 0.9;
+  static const _zoomCap = 6.0;
 
   CameraController? _controller;
   var _lens = CameraLensDirection.back;
   var _canFlip = false;
   var _hasUltraWide = false;
   var _ultraWide = false;
-  var _maxZoom = 1.0;
+  var _flashOn = false;
 
-  /// Mức zoom hiển thị ứng với mức 1 của ống kính đang mở.
-  double get _lensFactor => _ultraWide ? _ultraWideFactor : 1;
+  /// Mức zoom lớn nhất của ống kính chính.
+  var _maxZoom = 1.0;
+  var _zoom = 1.0;
+
+  /// Tăng mỗi lần [close]; lần mở nào xong sau khi đã có lệnh đóng thì tự hủy.
+  var _closes = 0;
 
   @override
-  double get minZoom => _lensFactor;
+  double get minZoom => _hasUltraWide ? ultraWideZoom : 1;
 
   @override
   double get maxZoom => _maxZoom;
 
   @override
-  bool get hasUltraWide => _hasUltraWide;
-
-  @override
-  bool get isUltraWide => _ultraWide;
-
-  @override
-  Future<CameraStatus> useUltraWide(bool on) {
-    _ultraWide = on;
-    return _openLens();
-  }
+  double get zoom => _zoom;
 
   @override
   bool get canFlip => _canFlip;
@@ -122,8 +110,11 @@ class PluginCaptureCamera implements CaptureCamera {
     return _openLens();
   }
 
+  /// Mở ống kính chính hoặc ống kính góc siêu rộng (theo [_ultraWide]) của
+  /// mặt camera đang chọn.
   Future<CameraStatus> _openLens() async {
     await close();
+    final closesBefore = _closes;
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) return CameraStatus.unavailable;
@@ -156,9 +147,20 @@ class PluginCaptureCamera implements CaptureCamera {
         enableAudio: false,
       );
       await controller.initialize();
+      if (_closes != closesBefore) {
+        // Màn chụp đã bị che trong lúc mở; không giữ camera chạy ngầm.
+        await controller.dispose();
+        return CameraStatus.starting;
+      }
       _controller = controller;
       await _lockPortrait(controller);
-      _maxZoom = await _readMaxZoom(controller);
+      if (_ultraWide) {
+        _zoom = ultraWideZoom;
+      } else {
+        _zoom = 1;
+        _maxZoom = await _readMaxZoom(controller);
+      }
+      if (_flashOn) await setFlash(true);
       return CameraStatus.ready;
     } on CameraException catch (error) {
       return switch (error.code) {
@@ -183,30 +185,40 @@ class PluginCaptureCamera implements CaptureCamera {
     }
   }
 
-  /// Mức zoom hiển thị lớn nhất của ống kính vừa mở.
+  /// Mức zoom lớn nhất của ống kính chính, chặn ở [_zoomCap].
   Future<double> _readMaxZoom(CameraController controller) async {
-    final cap = _ultraWide ? _ultraWideZoomCap : _zoomCap;
     try {
-      final max = await controller.getMaxZoomLevel() * _lensFactor;
-      return max.clamp(minZoom, cap).toDouble();
+      final max = await controller.getMaxZoomLevel();
+      return max.clamp(1.0, _zoomCap).toDouble();
     } on Exception {
       // Không đọc được thì coi như ống kính không zoom được.
-      return minZoom;
+      return 1;
     }
   }
 
   @override
-  Future<void> setZoom(double level) async {
-    final controller = _controller;
-    if (controller == null) return;
-    try {
-      // Camera tính mức zoom theo từng ống kính, bắt đầu từ 1.
-      await controller.setZoomLevel(
-        level.clamp(minZoom, _maxZoom).toDouble() / _lensFactor,
-      );
-    } on Exception {
-      // Camera vừa bị đóng giữa chừng; lần mở sau sẽ về mức nhỏ nhất.
+  Future<CameraStatus> setZoom(double level) async {
+    final plan = planZoom(
+      level,
+      hasUltraWide: _hasUltraWide,
+      onUltraWide: _ultraWide,
+      maxZoom: _maxZoom,
+    );
+    if (plan.ultraWide != _ultraWide) {
+      _ultraWide = plan.ultraWide;
+      final status = await _openLens();
+      if (status != CameraStatus.ready) return status;
     }
+
+    final controller = _controller;
+    if (controller == null) return CameraStatus.starting;
+    try {
+      await controller.setZoomLevel(plan.lensZoom);
+      _zoom = plan.zoom;
+    } on Exception {
+      // Camera vừa bị đóng giữa chừng; lần mở sau sẽ về 1×.
+    }
+    return CameraStatus.ready;
   }
 
   @override
@@ -235,7 +247,10 @@ class PluginCaptureCamera implements CaptureCamera {
   @override
   Future<Uint8List> takePhoto() async {
     final controller = _controller;
-    if (controller == null) throw StateError('Camera chưa mở');
+    if (controller == null) {
+      // Ví dụ bấm chụp đúng lúc camera đang đổi ống kính.
+      throw CameraException('cameraNotReady', 'Camera chưa mở');
+    }
     final file = await controller.takePicture();
     return file.readAsBytes();
   }
@@ -246,14 +261,18 @@ class PluginCaptureCamera implements CaptureCamera {
     if (controller == null) return false;
     try {
       await controller.setFlashMode(on ? FlashMode.always : FlashMode.off);
+      // Nhớ lại để bật tiếp khi camera đổi sang ống kính khác.
+      _flashOn = on;
       return true;
     } on CameraException {
+      _flashOn = false;
       return false;
     }
   }
 
   @override
   Future<void> close() async {
+    _closes++;
     final controller = _controller;
     _controller = null;
     await controller?.dispose();

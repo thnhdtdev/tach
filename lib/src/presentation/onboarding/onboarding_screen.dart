@@ -175,8 +175,8 @@ class _CaptureArt extends StatelessWidget {
     return Transform.rotate(
       angle: -0.06,
       child: Container(
-        width: 232,
-        height: 300,
+        width: 256,
+        height: 256,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(28)),
         child: Stack(

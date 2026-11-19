@@ -71,6 +71,9 @@ class ExpensePage extends StatelessWidget {
 
     return SafeArea(
       child: Column(
+        // Cả cụm (người trả, ảnh vuông, phần của bạn, bình luận) nằm giữa
+        // màn hình thay vì dồn lên trên.
+        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
@@ -98,55 +101,62 @@ class ExpensePage extends StatelessWidget {
               ],
             ),
           ),
-          Expanded(
+          Flexible(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(28),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    ExpensePhoto(
-                      photoUrl: expense.photoUrl,
-                      photoBytes: expense.photoBytes,
-                    ),
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.center,
-                          end: Alignment.bottomCenter,
-                          colors: [Color(0x00000000), Color(0xA6000000)],
+              // Ảnh vuông như lúc chụp; máy thấp thì thu nhỏ, vẫn giữ 1:1.
+              child: Align(
+                heightFactor: 1,
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ExpensePhoto(
+                          photoUrl: expense.photoUrl,
+                          photoBytes: expense.photoBytes,
                         ),
-                      ),
-                    ),
-                    Positioned(
-                      left: 20,
-                      right: 20,
-                      bottom: 18,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              formatVnd(expense.amount),
-                              style: text.displaySmall,
+                        const DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.center,
+                              end: Alignment.bottomCenter,
+                              colors: [Color(0x00000000), Color(0xA6000000)],
                             ),
                           ),
-                          if (expense.note.isNotEmpty)
-                            Text(
-                              expense.note,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: text.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
+                        ),
+                        Positioned(
+                          left: 20,
+                          right: 20,
+                          bottom: 18,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  formatVnd(expense.amount),
+                                  style: text.displaySmall,
+                                ),
                               ),
-                            ),
-                        ],
-                      ),
+                              if (expense.note.isNotEmpty)
+                                Text(
+                                  expense.note,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: text.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

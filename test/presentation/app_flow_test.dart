@@ -12,6 +12,7 @@ import 'package:tach/src/services/avatar/avatar_picker.dart';
 import 'package:tach/src/services/camera/capture_camera.dart';
 import 'package:tach/src/presentation/home/home_screen.dart';
 import 'package:tach/src/presentation/ledger/ledger_cubit.dart';
+import 'package:tach/src/presentation/widgets/expense_photo.dart';
 
 /// Ảnh PNG 1×1 hợp lệ, dùng thay cho ảnh người dùng chọn.
 final _tinyPng = base64Decode(
@@ -42,6 +43,22 @@ class _FakeCamera implements CaptureCamera {
   var photoFails = false;
   var hasFlash = true;
   bool? flashOn;
+  var front = false;
+  var twoLenses = true;
+
+  @override
+  bool get canFlip => twoLenses;
+
+  @override
+  bool get isFront => front;
+
+  @override
+  Future<CameraStatus> flip() async {
+    front = !front;
+    // Camera trước của máy giả không có đèn flash.
+    hasFlash = !front;
+    return open();
+  }
 
   @override
   Future<CameraStatus> open() async {
@@ -712,7 +729,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Xong'), findsNothing);
 
-        await tester.tap(find.byTooltip('Ghi không cần ảnh'));
+        await tester.tap(find.text('Ghi không cần ảnh'));
         await tester.pumpAndSettle();
         expect(find.text('Xong'), findsOneWidget);
       },
@@ -796,5 +813,78 @@ void main() {
       expect(find.byTooltip('Tắt đèn flash'), findsOneWidget);
       await tester.pump(const Duration(seconds: 3));
     });
+
+    testWidgets(
+      'đổi camera trước sau; sang camera trước thì đèn flash tự tắt',
+      (tester) async {
+        await _launch(tester);
+        await _signIn(tester);
+
+        await tester.tap(find.byTooltip('Bật đèn flash'));
+        await tester.pumpAndSettle();
+        expect(find.byTooltip('Tắt đèn flash'), findsOneWidget);
+
+        await tester.tap(find.byTooltip('Đổi sang camera trước'));
+        await tester.pumpAndSettle();
+        expect(_camera.front, isTrue);
+        expect(find.byTooltip('Đổi sang camera sau'), findsOneWidget);
+        expect(find.byTooltip('Bật đèn flash'), findsOneWidget);
+        expect(find.byKey(const ValueKey('live-preview')), findsOneWidget);
+
+        await tester.tap(find.byTooltip('Đổi sang camera sau'));
+        await tester.pumpAndSettle();
+        expect(_camera.front, isFalse);
+        expect(find.byTooltip('Đổi sang camera trước'), findsOneWidget);
+      },
+    );
+
+    testWidgets('máy chỉ có một camera thì nút đổi camera bị khóa', (
+      tester,
+    ) async {
+      await _launch(tester);
+      _camera.twoLenses = false;
+      await _signIn(tester);
+
+      final flip = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.cameraswitch_outlined),
+      );
+      expect(flip.onPressed, isNull);
+    });
+
+    testWidgets('khung ngắm và ảnh ở bảng tin đều vuông 1:1', (tester) async {
+      await _launch(tester);
+      await _signIn(tester);
+
+      final viewfinder = tester.getSize(
+        find.byKey(const ValueKey('live-preview')),
+      );
+      expect(viewfinder.width, viewfinder.height);
+      expect(viewfinder.width, greaterThan(300));
+
+      await tester.tap(find.textContaining('vừa ghi'));
+      await tester.pumpAndSettle();
+      final photo = tester.getSize(find.byType(ExpensePhoto));
+      expect(photo.width, photo.height);
+      expect(photo.width, viewfinder.width);
+    });
+
+    testWidgets(
+      'máy nhỏ: bàn phím số hiện mà khung ảnh vẫn vuông, không tràn',
+      (tester) async {
+        await _launch(tester);
+        // iPhone SE: 375×667.
+        tester.view.physicalSize = const Size(750, 1334);
+        tester.view.devicePixelRatio = 2;
+        await _signIn(tester);
+
+        await tester.tap(find.bySemanticsLabel('Chụp'));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('key-0')), findsOneWidget);
+
+        final photo = tester.getSize(find.byType(ExpensePhoto));
+        expect(photo.width, moreOrLessEquals(photo.height, epsilon: 0.5));
+        expect(photo.width, greaterThan(180));
+      },
+    );
   });
 }

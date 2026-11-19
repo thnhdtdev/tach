@@ -72,6 +72,12 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   bool get _useSamplePhoto =>
       kDebugMode && _cameraStatus == CameraStatus.unavailable;
 
+  bool get _canFlip =>
+      _cameraStatus == CameraStatus.ready &&
+      _camera.canFlip &&
+      !_openingCamera &&
+      !_takingPhoto;
+
   bool get _canShoot =>
       !_takingPhoto && (_cameraStatus == CameraStatus.ready || _useSamplePhoto);
 
@@ -107,18 +113,36 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       return;
     }
     if (_openingCamera || _cameraStatus == CameraStatus.ready) return;
+    await _openWith(_camera.open);
+  }
 
+  /// Đổi giữa camera trước và sau.
+  Future<void> _flipCamera() async {
+    if (!_canFlip) return;
+    setState(() => _cameraStatus = CameraStatus.starting);
+    await _openWith(_camera.flip);
+  }
+
+  /// Chạy một lần mở camera ([CaptureCamera.open] hoặc [CaptureCamera.flip])
+  /// rồi cập nhật giao diện theo kết quả.
+  Future<void> _openWith(Future<CameraStatus> Function() action) async {
     _openingCamera = true;
-    final status = await _camera.open();
+    final status = await action();
     _openingCamera = false;
     if (!mounted) return;
 
+    // Trong lúc mở, màn này có thể đã bị che hoặc app đã xuống nền.
     if (!(_appResumed && _routeCurrent)) {
       await _camera.close();
       return;
     }
     setState(() => _cameraStatus = status);
-    if (status == CameraStatus.ready && _flashOn) await _camera.setFlash(true);
+
+    if (status == CameraStatus.ready && _flashOn) {
+      // Camera trước thường không có đèn flash; khi đó tắt nút flash theo.
+      final applied = await _camera.setFlash(true);
+      if (!applied && mounted) setState(() => _flashOn = false);
+    }
   }
 
   @override
@@ -249,42 +273,53 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(28),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (_stage != _Stage.viewfinder)
-                      ExpensePhoto(photoUrl: _photoUrl, photoBytes: _photoBytes)
-                    else if (_cameraStatus == CameraStatus.ready)
-                      _camera.preview()
-                    else
-                      const ExpensePhoto(photoUrl: 'sample:viewfinder'),
-                    if (_stage == _Stage.viewfinder) ...[
-                      const _FocusBrackets(),
-                      if (_cameraNotice() case final notice?)
-                        _CameraNotice(notice: notice),
-                    ],
-                    if (_stage != _Stage.viewfinder) _amountOnPhoto(context),
-                    if (_captures > 0)
-                      IgnorePointer(
-                        // Khóa đặt ở widget ngoài cùng để hiệu ứng chớp không
-                        // chạy lại khi các lớp khác trong Stack đổi chỗ.
-                        key: ValueKey(_captures),
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0.85, end: 0),
-                          duration: const Duration(milliseconds: 260),
-                          builder: (_, opacity, _) => ColoredBox(
-                            color: Colors.white.withValues(alpha: opacity),
+              // Khung ảnh vuông. Khi bàn phím số chiếm chỗ trên máy nhỏ, khung
+              // tự thu lại nhưng vẫn giữ tỉ lệ 1:1.
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (_stage != _Stage.viewfinder)
+                          ExpensePhoto(
+                            photoUrl: _photoUrl,
+                            photoBytes: _photoBytes,
+                          )
+                        else if (_cameraStatus == CameraStatus.ready)
+                          _camera.preview()
+                        else
+                          const ExpensePhoto(photoUrl: 'sample:viewfinder'),
+                        if (_stage == _Stage.viewfinder) ...[
+                          const _FocusBrackets(),
+                          if (_cameraNotice() case final notice?)
+                            _CameraNotice(notice: notice),
+                        ],
+                        if (_stage != _Stage.viewfinder)
+                          _amountOnPhoto(context),
+                        if (_captures > 0)
+                          IgnorePointer(
+                            // Khóa đặt ở widget ngoài cùng để hiệu ứng chớp không
+                            // chạy lại khi các lớp khác trong Stack đổi chỗ.
+                            key: ValueKey(_captures),
+                            child: TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0.85, end: 0),
+                              duration: const Duration(milliseconds: 260),
+                              builder: (_, opacity, _) => ColoredBox(
+                                color: Colors.white.withValues(alpha: opacity),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    if (_toast != null)
-                      Align(
-                        alignment: Alignment.topCenter,
-                        child: _Toast(message: _toast!),
-                      ),
-                  ],
+                        if (_toast != null)
+                          Align(
+                            alignment: Alignment.topCenter,
+                            child: _Toast(message: _toast!),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -532,10 +567,20 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     final text = Theme.of(context).textTheme;
     final latest = state.expenses.isEmpty ? null : state.expenses.first;
     return Padding(
-      padding: const EdgeInsets.only(top: 18, bottom: 6),
+      padding: const EdgeInsets.only(top: 6, bottom: 6),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          TextButton.icon(
+            onPressed: _start,
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white.withValues(alpha: 0.85),
+              minimumSize: const Size(64, 44),
+            ),
+            icon: const Icon(Icons.edit_note, size: 20),
+            label: const Text('Ghi không cần ảnh'),
+          ),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -550,10 +595,14 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
               ),
               _ShutterButton(onPressed: _canShoot ? _shoot : null),
               IconButton(
-                onPressed: _start,
-                tooltip: 'Ghi không cần ảnh',
+                onPressed: _canFlip ? _flipCamera : null,
+                tooltip: _camera.isFront
+                    ? 'Đổi sang camera sau'
+                    : 'Đổi sang camera trước',
                 iconSize: 26,
-                icon: const Icon(Icons.edit_note, color: Colors.white),
+                color: Colors.white,
+                disabledColor: Colors.white.withValues(alpha: 0.35),
+                icon: const Icon(Icons.cameraswitch_outlined),
               ),
             ],
           ),

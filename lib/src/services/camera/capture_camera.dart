@@ -18,8 +18,17 @@ enum CameraStatus {
 
 /// Camera của màn chụp khoản chi.
 abstract interface class CaptureCamera {
-  /// Mở camera sau của máy. Gọi lại được sau khi [close].
+  /// Mở camera đang chọn (mặc định là camera sau). Gọi lại được sau [close].
   Future<CameraStatus> open();
+
+  /// Máy có cả camera trước và sau để đổi qua lại không. Biết được sau [open].
+  bool get canFlip;
+
+  /// Đang dùng camera trước (camera quay về phía người cầm máy).
+  bool get isFront;
+
+  /// Đổi giữa camera trước và sau rồi mở camera mới.
+  Future<CameraStatus> flip();
 
   /// Hình xem trực tiếp, lấp đầy khung chứa. Chỉ dùng khi đã [CameraStatus.ready].
   Widget preview();
@@ -37,6 +46,20 @@ abstract interface class CaptureCamera {
 /// Camera thật, dùng plugin `camera`.
 class PluginCaptureCamera implements CaptureCamera {
   CameraController? _controller;
+  var _lens = CameraLensDirection.back;
+  var _canFlip = false;
+
+  @override
+  bool get canFlip => _canFlip;
+
+  @override
+  bool get isFront => _lens == CameraLensDirection.front;
+
+  @override
+  Future<CameraStatus> flip() {
+    _lens = isFront ? CameraLensDirection.back : CameraLensDirection.front;
+    return open();
+  }
 
   @override
   Future<CameraStatus> open() async {
@@ -45,13 +68,20 @@ class PluginCaptureCamera implements CaptureCamera {
       final cameras = await availableCameras();
       if (cameras.isEmpty) return CameraStatus.unavailable;
 
-      final back = cameras.firstWhere(
-        (c) => c.lensDirection == CameraLensDirection.back,
+      bool has(CameraLensDirection lens) =>
+          cameras.any((c) => c.lensDirection == lens);
+      _canFlip =
+          has(CameraLensDirection.back) && has(CameraLensDirection.front);
+
+      // Máy chỉ có một camera thì dùng camera đó, dù hướng nào.
+      final chosen = cameras.firstWhere(
+        (c) => c.lensDirection == _lens,
         orElse: () => cameras.first,
       );
+      _lens = chosen.lensDirection;
       // Tắt âm thanh để không phải xin quyền micro; app chỉ chụp ảnh.
       final controller = CameraController(
-        back,
+        chosen,
         ResolutionPreset.high,
         enableAudio: false,
       );

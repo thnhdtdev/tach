@@ -237,7 +237,8 @@ void main() {
 
     await tester.tap(find.textContaining('vừa ghi'));
     await tester.pumpAndSettle();
-    expect(find.text('Minh trả'), findsOneWidget);
+    expect(find.text('Minh'), findsOneWidget);
+    expect(find.textContaining(' trả'), findsNothing);
     expect(find.text('30.000đ'), findsOneWidget);
     expect(find.textContaining('Bạn nợ 7.500đ'), findsOneWidget);
 
@@ -275,7 +276,7 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel(RegExp('Gạo 5kg')));
     await tester.pumpAndSettle();
-    expect(find.text('Bạn trả'), findsOneWidget);
+    expect(find.text('Bạn'), findsOneWidget);
     expect(find.text('Gạo 5kg'), findsOneWidget);
   });
 

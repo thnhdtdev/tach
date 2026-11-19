@@ -129,7 +129,7 @@ class ExpensePage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${state.displayName(expense.payerId)} trả',
+                        state.displayName(expense.payerId),
                         style: text.labelLarge,
                       ),
                       Text(timeAgo(expense.createdAt), style: text.bodySmall),

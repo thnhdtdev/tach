@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
 import '../ledger/ledger_cubit.dart';
 
 /// [beforeJoin] chạy trước khi gửi mã, dùng ở màn đăng nhập để tạo tài khoản
@@ -16,13 +15,8 @@ Future<bool> showJoinGroupSheet(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    backgroundColor: TachColors.paper,
     showDragHandle: true,
-    // Màn camera dùng theme tối; bảng này là nền sáng.
-    builder: (_) => Theme(
-      data: tachLightTheme,
-      child: _JoinGroupSheet(beforeJoin: beforeJoin),
-    ),
+    builder: (_) => _JoinGroupSheet(beforeJoin: beforeJoin),
   );
   return joined ?? false;
 }
@@ -119,14 +113,14 @@ class _JoinGroupSheetState extends State<_JoinGroupSheet> {
             decoration: InputDecoration(
               hintText: 'Ví dụ K7M2QP',
               hintStyle: text.titleLarge?.copyWith(
-                color: TachColors.inkSoft.withValues(alpha: 0.5),
+                color: TachColors.soft.withValues(alpha: 0.5),
                 letterSpacing: 0,
                 fontWeight: FontWeight.w400,
               ),
               errorText: _error,
               errorMaxLines: 2,
               filled: true,
-              fillColor: TachColors.mintWash.withValues(alpha: 0.5),
+              fillColor: TachColors.fill,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,

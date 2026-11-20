@@ -78,11 +78,11 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             decoration: InputDecoration(
               hintText: _type.nameHint,
               hintStyle: text.titleMedium?.copyWith(
-                color: TachColors.inkSoft.withValues(alpha: 0.7),
+                color: TachColors.soft.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w400,
               ),
               filled: true,
-              fillColor: TachColors.mintWash.withValues(alpha: 0.5),
+              fillColor: TachColors.fill,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
@@ -132,7 +132,7 @@ class _TypeOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final color = selected ? TachColors.mintDeep : TachColors.ink;
+    final color = selected ? TachColors.mintLight : Colors.white;
 
     return Semantics(
       button: true,
@@ -140,11 +140,11 @@ class _TypeOption extends StatelessWidget {
       label: type.label,
       excludeSemantics: true,
       child: Material(
-        color: selected ? TachColors.mintWash : TachColors.paper,
+        color: selected ? TachColors.mintTint : TachColors.nightRaised,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
           side: BorderSide(
-            color: selected ? TachColors.mintDeep : TachColors.line,
+            color: selected ? TachColors.mintLight : TachColors.hairline,
             width: selected ? 1.5 : 1,
           ),
         ),

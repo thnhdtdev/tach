@@ -5,7 +5,11 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/theme/app_colors.dart';
 
 class TachMark extends StatelessWidget {
-  const TachMark({super.key, this.size = 72, this.color = TachColors.mint});
+  const TachMark({
+    super.key,
+    this.size = 72,
+    this.color = TachColors.mintLight,
+  });
 
   final double size;
   final Color color;
@@ -39,7 +43,7 @@ class TachLogo extends StatelessWidget {
             fontSize: height * 0.8,
             height: 1,
             fontWeight: FontWeight.w700,
-            color: TachColors.mintDeep,
+            color: Colors.white,
           ),
         ),
       ],

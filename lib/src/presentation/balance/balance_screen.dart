@@ -19,7 +19,6 @@ class BalanceScreen extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: TachColors.paper,
       showDragHandle: true,
       builder: (_) => BlocProvider.value(
         value: context.read<LedgerCubit>(),
@@ -64,7 +63,7 @@ class BalanceScreen extends StatelessWidget {
             Text(
               formatVnd(myNet.abs()),
               style: text.displayLarge?.copyWith(
-                color: myNet < 0 ? TachColors.mint : TachColors.mintDeep,
+                color: myNet < 0 ? TachColors.mint : TachColors.mintLight,
               ),
             ),
           const SizedBox(height: 6),
@@ -221,7 +220,9 @@ class _PersonRow extends StatelessWidget {
                 Text(name, style: text.bodyLarge),
                 Text(
                   formatVnd(amount),
-                  style: text.titleMedium?.copyWith(color: TachColors.mintDeep),
+                  style: text.titleMedium?.copyWith(
+                    color: TachColors.mintLight,
+                  ),
                 ),
                 if (caption != null) Text(caption!, style: text.bodySmall),
               ],

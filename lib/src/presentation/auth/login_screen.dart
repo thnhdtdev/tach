@@ -71,15 +71,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: TachMark(size: 76),
               ),
               const SizedBox(height: 22),
-              Text(
-                'Tach',
-                style: text.displayLarge?.copyWith(color: TachColors.mintDeep),
-              ),
+              Text('Tach', style: text.displayLarge),
               const SizedBox(height: 6),
               Text(
                 'Chụp là ghi, tách là xong.',
                 style: text.titleMedium?.copyWith(
-                  color: TachColors.inkSoft,
+                  color: TachColors.soft,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -109,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
               TextButton(
                 onPressed: _busy == null ? _enterInviteCode : null,
                 style: TextButton.styleFrom(
-                  foregroundColor: TachColors.mintDeep,
+                  foregroundColor: TachColors.mintLight,
                   minimumSize: const Size(64, 48),
                 ),
                 child: const Text('Có mã mời nhóm? Nhập mã'),
@@ -134,8 +131,8 @@ class _LoginScreenState extends State<LoginScreen> {
       SignInMethod.apple => FilledButton.icon(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
         ),
         icon: const Icon(Icons.apple, size: 22),
         label: const Text('Tiếp tục với Apple'),

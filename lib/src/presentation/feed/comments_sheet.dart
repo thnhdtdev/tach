@@ -102,7 +102,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
                   tooltip: 'Đóng',
-                  icon: const Icon(Icons.close, color: TachColors.ink),
+                  icon: const Icon(Icons.close, color: Colors.white),
                 ),
               ],
             ),
@@ -149,7 +149,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
           ),
           if (_replyTo != null)
             Container(
-              color: TachColors.mintWash,
+              color: TachColors.mintTint,
               padding: const EdgeInsets.only(left: 24, right: 8),
               child: Row(
                 children: [
@@ -157,7 +157,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                     child: Text(
                       'Đang trả lời ${state.displayName(_replyTo!.userId)}',
                       style: text.bodySmall?.copyWith(
-                        color: TachColors.mintDeep,
+                        color: TachColors.mintLight,
                       ),
                     ),
                   ),
@@ -165,7 +165,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                     onPressed: () => setState(() => _replyTo = null),
                     tooltip: 'Thôi trả lời',
                     iconSize: 18,
-                    icon: const Icon(Icons.close, color: TachColors.mintDeep),
+                    icon: const Icon(Icons.close, color: TachColors.mintLight),
                   ),
                 ],
               ),
@@ -189,10 +189,10 @@ class _CommentsSheetState extends State<CommentsSheet> {
                         isDense: true,
                         hintText: 'Viết bình luận',
                         hintStyle: text.bodyLarge?.copyWith(
-                          color: TachColors.inkSoft,
+                          color: TachColors.soft,
                         ),
                         filled: true,
-                        fillColor: const Color(0xFFF1F4F3),
+                        fillColor: TachColors.fill,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 12,
@@ -275,7 +275,7 @@ class _CommentTile extends StatelessWidget {
                         'Trả lời',
                         style: text.bodySmall?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: TachColors.mintDeep,
+                          color: TachColors.mintLight,
                         ),
                       ),
                     ),

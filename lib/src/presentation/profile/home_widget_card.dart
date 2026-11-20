@@ -17,7 +17,6 @@ class HomeWidgetCard extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: TachColors.paper,
       showDragHandle: true,
       builder: (_) => const _AddWidgetSteps(),
     );
@@ -167,13 +166,13 @@ class _AddWidgetSteps extends StatelessWidget {
                       height: 26,
                       alignment: Alignment.center,
                       decoration: const BoxDecoration(
-                        color: TachColors.mintWash,
+                        color: TachColors.mintTint,
                         shape: BoxShape.circle,
                       ),
                       child: Text(
                         '${index + 1}',
                         style: text.labelLarge?.copyWith(
-                          color: TachColors.mintDeep,
+                          color: TachColors.mintLight,
                         ),
                       ),
                     ),

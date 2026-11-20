@@ -42,7 +42,7 @@ class _NameSetupScreenState extends State<NameSetupScreen> {
               Text(
                 'Cả nhóm sẽ thấy tên này bên cạnh các khoản bạn ghi. Bạn đổi '
                 'lại được trong hồ sơ.',
-                style: text.bodyLarge?.copyWith(color: TachColors.inkSoft),
+                style: text.bodyLarge?.copyWith(color: TachColors.soft),
               ),
               const SizedBox(height: 20),
               TextField(
@@ -54,11 +54,11 @@ class _NameSetupScreenState extends State<NameSetupScreen> {
                 decoration: InputDecoration(
                   hintText: 'Ví dụ An',
                   hintStyle: text.titleLarge?.copyWith(
-                    color: TachColors.inkSoft.withValues(alpha: 0.5),
+                    color: TachColors.soft.withValues(alpha: 0.5),
                     fontWeight: FontWeight.w400,
                   ),
                   filled: true,
-                  fillColor: TachColors.mintWash.withValues(alpha: 0.5),
+                  fillColor: TachColors.fill,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,

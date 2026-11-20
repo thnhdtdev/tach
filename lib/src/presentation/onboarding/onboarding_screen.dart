@@ -79,7 +79,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: TextButton(
                       onPressed: widget.onDone,
                       style: TextButton.styleFrom(
-                        foregroundColor: TachColors.inkSoft,
+                        foregroundColor: TachColors.soft,
                       ),
                       child: const Text('Bỏ qua'),
                     ),
@@ -123,7 +123,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Text(
                           page.body,
                           style: text.bodyLarge?.copyWith(
-                            color: TachColors.inkSoft,
+                            color: TachColors.soft,
                           ),
                         ),
                         const SizedBox(height: 28),
@@ -150,7 +150,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             decoration: BoxDecoration(
                               color: i == _index
                                   ? TachColors.mint
-                                  : TachColors.line,
+                                  : TachColors.hairline,
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -288,7 +288,7 @@ class _Photo extends StatelessWidget {
       fit: BoxFit.cover,
       // Ô lớn nhất rộng 264 điểm; giải mã vừa đủ cho màn hình 3x.
       cacheWidth: 680,
-      errorBuilder: (_, _, _) => const ColoredBox(color: TachColors.mintWash),
+      errorBuilder: (_, _, _) => const ColoredBox(color: TachColors.mintTint),
     );
   }
 }
@@ -345,7 +345,7 @@ class _SplitArt extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: TachColors.mintDeep,
+                        color: TachColors.mintLight,
                       ),
                     ),
                   ],
@@ -373,14 +373,14 @@ class _PayArt extends StatelessWidget {
           label: 'Trả Lan',
           strong: '266.000đ',
           child: ColoredBox(
-            color: TachColors.mintWash,
+            color: TachColors.mintTint,
             child: Align(
               alignment: Alignment.topCenter,
               child: Container(
                 margin: const EdgeInsets.only(top: 22),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: TachColors.paper,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: QrImageView(

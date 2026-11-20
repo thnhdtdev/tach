@@ -54,13 +54,13 @@ class _VietQrSheetState extends State<VietQrSheet> {
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: TachColors.mintWash,
+                  color: TachColors.mintTint,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '${receiver.name} chưa thêm tài khoản ngân hàng nên chưa có '
                   'mã QR. Bạn có thể trả tiền mặt rồi báo đã trả.',
-                  style: text.bodyLarge?.copyWith(color: TachColors.mintDeep),
+                  style: text.bodyLarge?.copyWith(color: TachColors.mintLight),
                 ),
               )
             else ...[
@@ -70,7 +70,7 @@ class _VietQrSheetState extends State<VietQrSheet> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: TachColors.line),
+                    border: Border.all(color: TachColors.hairline),
                   ),
                   child: QrImageView(
                     data: buildVietQrPayload(
@@ -98,7 +98,7 @@ class _VietQrSheetState extends State<VietQrSheet> {
                 TextButton.icon(
                   onPressed: () => _copy(code),
                   style: TextButton.styleFrom(
-                    foregroundColor: TachColors.mintDeep,
+                    foregroundColor: TachColors.mintLight,
                     minimumSize: const Size(64, 44),
                   ),
                   icon: Icon(_copied ? Icons.check : Icons.copy, size: 18),

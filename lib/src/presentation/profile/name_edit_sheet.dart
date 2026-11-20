@@ -71,7 +71,7 @@ class _NameEditSheetState extends State<NameEditSheet> {
             decoration: InputDecoration(
               hintText: widget.hint,
               filled: true,
-              fillColor: TachColors.mintWash.withValues(alpha: 0.5),
+              fillColor: TachColors.fill,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,

@@ -7,7 +7,6 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
 import '../../domain/entities/expense.dart';
 import '../balance/balance_screen.dart';
 import '../capture/capture_page.dart';
@@ -140,13 +139,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final result = await showModalBottomSheet<GroupsSheetResult>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: TachColors.paper,
       showDragHandle: true,
-      // Màn camera dùng theme tối; bảng nhóm là nền sáng.
-      builder: (_) => Theme(
-        data: tachLightTheme,
-        child: BlocProvider.value(value: cubit, child: const GroupsSheet()),
-      ),
+      builder: (_) =>
+          BlocProvider.value(value: cubit, child: const GroupsSheet()),
     );
     if (!mounted) return;
     switch (result) {
@@ -189,96 +184,93 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Đang ghi dở một khoản thì không vuốt sang hồ sơ, tránh mất số đang gõ.
     final canSwipe = !_capturing;
 
-    return Theme(
-      data: tachNightTheme,
-      child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
-        child: Scaffold(
-          backgroundColor: TachColors.night,
-          body: state.isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: TachColors.mintLight),
-                )
-              : state.loadFailed
-              ? _LoadFailedView(
-                  onRetry: context.read<LedgerCubit>().retryLoad,
-                  onSignOut: widget.onSignOut,
-                )
-              : GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onHorizontalDragStart: canSwipe ? (_) => _swipeDx = 0 : null,
-                  onHorizontalDragUpdate: canSwipe
-                      ? (details) => _swipeDx += details.primaryDelta ?? 0
-                      : null,
-                  onHorizontalDragEnd: canSwipe ? _onSwipeEnd : null,
-                  child: !state.hasGroup
-                      ? _NoGroupView(
-                          state: state,
-                          onOpenProfile: _openProfile,
-                          onCreateGroup: () => Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const CreateGroupScreen(),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: TachColors.night,
+        body: state.isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: TachColors.mintLight),
+              )
+            : state.loadFailed
+            ? _LoadFailedView(
+                onRetry: context.read<LedgerCubit>().retryLoad,
+                onSignOut: widget.onSignOut,
+              )
+            : GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onHorizontalDragStart: canSwipe ? (_) => _swipeDx = 0 : null,
+                onHorizontalDragUpdate: canSwipe
+                    ? (details) => _swipeDx += details.primaryDelta ?? 0
+                    : null,
+                onHorizontalDragEnd: canSwipe ? _onSwipeEnd : null,
+                child: !state.hasGroup
+                    ? _NoGroupView(
+                        state: state,
+                        onOpenProfile: _openProfile,
+                        onCreateGroup: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const CreateGroupScreen(),
+                          ),
+                        ),
+                        onJoinGroup: () => showJoinGroupSheet(context),
+                      )
+                    : Stack(
+                        children: [
+                          Positioned.fill(
+                            child: FeedBackground(
+                              pages: _pages,
+                              colors: _photoColors,
+                              camera: _cameraColor,
+                              expenses: state.expenses,
                             ),
                           ),
-                          onJoinGroup: () => showJoinGroupSheet(context),
-                        )
-                      : Stack(
-                          children: [
-                            Positioned.fill(
-                              child: FeedBackground(
-                                pages: _pages,
-                                colors: _photoColors,
-                                camera: _cameraColor,
-                                expenses: state.expenses,
-                              ),
-                            ),
-                            PageView.builder(
-                              controller: _pages,
-                              scrollDirection: Axis.vertical,
-                              physics: _capturing
-                                  ? const NeverScrollableScrollPhysics()
-                                  : null,
-                              itemCount: state.expenses.length + 1,
-                              onPageChanged: _onPageChanged,
-                              itemBuilder: (context, page) {
-                                if (page == 0) {
-                                  return CapturePage(
-                                    onBusyChanged: (busy) =>
-                                        setState(() => _capturing = busy),
-                                    onFrameColorChanged: (color) =>
-                                        _cameraColor.value = color,
-                                    onOpenFeed: () => _goToPage(1),
-                                    onOpenProfile: _openProfile,
-                                    onOpenGroups: _openGroups,
-                                  );
-                                }
-                                final expense = state.expenses[page - 1];
-                                return ExpensePage(
-                                  key: ValueKey(expense.id),
-                                  expense: expense,
-                                  state: state,
+                          PageView.builder(
+                            controller: _pages,
+                            scrollDirection: Axis.vertical,
+                            physics: _capturing
+                                ? const NeverScrollableScrollPhysics()
+                                : null,
+                            itemCount: state.expenses.length + 1,
+                            onPageChanged: _onPageChanged,
+                            itemBuilder: (context, page) {
+                              if (page == 0) {
+                                return CapturePage(
+                                  onBusyChanged: (busy) =>
+                                      setState(() => _capturing = busy),
+                                  onFrameColorChanged: (color) =>
+                                      _cameraColor.value = color,
+                                  onOpenFeed: () => _goToPage(1),
+                                  onOpenProfile: _openProfile,
+                                  onOpenGroups: _openGroups,
                                 );
-                              },
-                            ),
-                            Align(
-                              alignment: Alignment.bottomCenter,
-                              child: IgnorePointer(
-                                ignoring: !_onFeed,
-                                child: AnimatedOpacity(
-                                  duration: const Duration(milliseconds: 180),
-                                  opacity: _onFeed ? 1 : 0,
-                                  child: _FeedBar(
-                                    onMonth: _openMonth,
-                                    onCamera: () => _goToPage(0),
-                                    onBalance: _openBalance,
-                                  ),
+                              }
+                              final expense = state.expenses[page - 1];
+                              return ExpensePage(
+                                key: ValueKey(expense.id),
+                                expense: expense,
+                                state: state,
+                              );
+                            },
+                          ),
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: IgnorePointer(
+                              ignoring: !_onFeed,
+                              child: AnimatedOpacity(
+                                duration: const Duration(milliseconds: 180),
+                                opacity: _onFeed ? 1 : 0,
+                                child: _FeedBar(
+                                  onMonth: _openMonth,
+                                  onCamera: () => _goToPage(0),
+                                  onBalance: _openBalance,
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                ),
-        ),
+                          ),
+                        ],
+                      ),
+              ),
       ),
     );
   }

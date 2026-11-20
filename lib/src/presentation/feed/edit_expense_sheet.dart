@@ -39,7 +39,7 @@ class _EditExpenseSheetState extends State<EditExpenseSheet> {
       labelText: label,
       suffixText: suffix,
       filled: true,
-      fillColor: TachColors.mintWash.withValues(alpha: 0.5),
+      fillColor: TachColors.fill,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide.none,
@@ -122,8 +122,8 @@ class _EditExpenseSheetState extends State<EditExpenseSheet> {
                 FilterChip(
                   label: Text(state.displayName(id)),
                   selected: _included.contains(id),
-                  selectedColor: TachColors.mintWash,
-                  checkmarkColor: TachColors.mintDeep,
+                  selectedColor: TachColors.mintTint,
+                  checkmarkColor: TachColors.mintLight,
                   onSelected: (selected) => setState(() {
                     selected ? _included.add(id) : _included.remove(id);
                   }),

@@ -5,7 +5,6 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/format/money.dart';
 import '../../core/format/time_ago.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
 import '../../dependency/injection.dart';
 import '../../domain/entities/expense.dart';
 import '../../services/photo/photo_loader.dart';
@@ -53,14 +52,9 @@ class ExpensePage extends StatelessWidget {
       // Không để bảng tràn lên dưới thanh trạng thái khi bàn phím mở.
       useSafeArea: true,
       showDragHandle: true,
-      backgroundColor: TachColors.paper,
-      // Bảng tin dùng theme tối; bảng bình luận là nền sáng.
-      builder: (_) => Theme(
-        data: tachLightTheme,
-        child: BlocProvider.value(
-          value: context.read<LedgerCubit>(),
-          child: CommentsSheet(expenseId: expense.id),
-        ),
+      builder: (_) => BlocProvider.value(
+        value: context.read<LedgerCubit>(),
+        child: CommentsSheet(expenseId: expense.id),
       ),
     );
   }
@@ -75,45 +69,40 @@ class ExpensePage extends StatelessWidget {
   Future<void> _openActions(BuildContext context) async {
     final action = await showModalBottomSheet<_ExpenseAction>(
       context: context,
-      backgroundColor: TachColors.paper,
       showDragHandle: true,
-      // Bảng tin dùng theme tối; bảng này là nền sáng.
-      builder: (sheetContext) => Theme(
-        data: tachLightTheme,
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_hasSharablePhoto)
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-                  leading: const Icon(Icons.ios_share),
-                  title: const Text('Chia sẻ ảnh'),
-                  onTap: () =>
-                      Navigator.of(sheetContext).pop(_ExpenseAction.share),
-                ),
-              if (_isMine)
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-                  leading: const Icon(Icons.edit_outlined),
-                  title: const Text('Sửa khoản chi'),
-                  onTap: () =>
-                      Navigator.of(sheetContext).pop(_ExpenseAction.edit),
-                ),
-              if (_isMine)
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-                  leading: const Icon(Icons.delete_outline),
-                  iconColor: TachColors.danger,
-                  textColor: TachColors.danger,
-                  title: const Text('Xóa khoản chi'),
-                  onTap: () =>
-                      Navigator.of(sheetContext).pop(_ExpenseAction.delete),
-                ),
-              const SizedBox(height: 8),
-            ],
-          ),
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_hasSharablePhoto)
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                leading: const Icon(Icons.ios_share),
+                title: const Text('Chia sẻ ảnh'),
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(_ExpenseAction.share),
+              ),
+            if (_isMine)
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Sửa khoản chi'),
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(_ExpenseAction.edit),
+              ),
+            if (_isMine)
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                leading: const Icon(Icons.delete_outline),
+                iconColor: TachColors.danger,
+                textColor: TachColors.danger,
+                title: const Text('Xóa khoản chi'),
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(_ExpenseAction.delete),
+              ),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
@@ -136,13 +125,9 @@ class ExpensePage extends StatelessWidget {
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      backgroundColor: TachColors.paper,
-      builder: (_) => Theme(
-        data: tachLightTheme,
-        child: BlocProvider.value(
-          value: context.read<LedgerCubit>(),
-          child: EditExpenseSheet(expense: expense),
-        ),
+      builder: (_) => BlocProvider.value(
+        value: context.read<LedgerCubit>(),
+        child: EditExpenseSheet(expense: expense),
       ),
     );
     if (edited != true) return;
@@ -182,26 +167,23 @@ class ExpensePage extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => Theme(
-        data: tachLightTheme,
-        child: AlertDialog(
-          title: const Text('Xóa khoản chi này?'),
-          content: Text(
-            'Ảnh và khoản chi ${formatVnd(expense.amount)} sẽ mất với cả nhóm, '
-            'số dư được tính lại. Việc này không hoàn tác được.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Giữ lại'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: TextButton.styleFrom(foregroundColor: TachColors.danger),
-              child: const Text('Xóa khoản chi'),
-            ),
-          ],
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Xóa khoản chi này?'),
+        content: Text(
+          'Ảnh và khoản chi ${formatVnd(expense.amount)} sẽ mất với cả nhóm, '
+          'số dư được tính lại. Việc này không hoàn tác được.',
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Giữ lại'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: TachColors.danger),
+            child: const Text('Xóa khoản chi'),
+          ),
+        ],
       ),
     );
     if (confirmed != true) return;
@@ -216,7 +198,6 @@ class ExpensePage extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: TachColors.nightRaised,
       showDragHandle: true,
       builder: (sheetContext) => ReactionPickerSheet(
         current: expense.reactions[state.meId],

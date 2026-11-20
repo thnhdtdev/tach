@@ -65,13 +65,13 @@ class _MonthGridScreenState extends State<MonthGridScreen> {
                             onSelected: (_) => setState(() => _filter = filter),
                             showCheckmark: false,
                             shape: const StadiumBorder(),
-                            side: const BorderSide(color: TachColors.line),
-                            backgroundColor: TachColors.paper,
-                            selectedColor: TachColors.mintWash,
+                            side: const BorderSide(color: TachColors.hairline),
+                            backgroundColor: TachColors.nightRaised,
+                            selectedColor: TachColors.mintTint,
                             labelStyle: text.labelLarge?.copyWith(
                               color: _filter == filter
-                                  ? TachColors.mintDeep
-                                  : TachColors.ink,
+                                  ? TachColors.mintLight
+                                  : Colors.white,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -141,7 +141,7 @@ class _MyBalanceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
       decoration: BoxDecoration(
-        color: TachColors.mintWash,
+        color: TachColors.mintTint,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -152,13 +152,13 @@ class _MyBalanceCard extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: text.bodyMedium?.copyWith(color: TachColors.mintDeep),
+                  style: text.bodyMedium?.copyWith(color: TachColors.mintLight),
                 ),
                 if (myNet != 0)
                   Text(
                     formatVnd(myNet.abs()),
                     style: text.headlineMedium?.copyWith(
-                      color: TachColors.mintDeep,
+                      color: TachColors.mintLight,
                     ),
                   ),
               ],

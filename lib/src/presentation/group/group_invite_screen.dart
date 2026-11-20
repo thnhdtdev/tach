@@ -55,7 +55,7 @@ class _GroupInviteScreenState extends State<GroupInviteScreen> {
           Text(
             'Gửi mã này cho mọi người. Họ nhập mã khi đăng nhập Tach '
             'là vào đúng nhóm.',
-            style: text.bodyLarge?.copyWith(color: TachColors.inkSoft),
+            style: text.bodyLarge?.copyWith(color: TachColors.soft),
           ),
           const SizedBox(height: 24),
           Semantics(
@@ -65,7 +65,7 @@ class _GroupInviteScreenState extends State<GroupInviteScreen> {
               padding: const EdgeInsets.symmetric(vertical: 26),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: TachColors.mintWash,
+                color: TachColors.mintTint,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: FittedBox(
@@ -73,7 +73,7 @@ class _GroupInviteScreenState extends State<GroupInviteScreen> {
                 child: Text(
                   group.inviteCode,
                   style: text.displaySmall?.copyWith(
-                    color: TachColors.mintDeep,
+                    color: TachColors.mintLight,
                     letterSpacing: 8,
                   ),
                 ),

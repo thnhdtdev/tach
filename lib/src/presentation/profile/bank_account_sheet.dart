@@ -62,7 +62,7 @@ class _BankAccountSheetState extends State<BankAccountSheet> {
     return InputDecoration(
       labelText: label,
       filled: true,
-      fillColor: TachColors.mintWash.withValues(alpha: 0.5),
+      fillColor: TachColors.fill,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide.none,
@@ -139,7 +139,7 @@ class _BankAccountSheetState extends State<BankAccountSheet> {
             TextButton(
               onPressed: _remove,
               style: TextButton.styleFrom(
-                foregroundColor: TachColors.inkSoft,
+                foregroundColor: TachColors.soft,
                 minimumSize: const Size(64, 48),
               ),
               child: const Text('Gỡ tài khoản'),

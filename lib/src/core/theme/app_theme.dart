@@ -45,73 +45,16 @@ final _pillButton = ButtonStyle(
   ),
 );
 
-final tachLightTheme = ThemeData(
-  brightness: Brightness.light,
+const _title = TextStyle(
   fontFamily: _family,
-  colorScheme: ColorScheme.fromSeed(seedColor: TachColors.mint).copyWith(
-    primary: TachColors.mint,
-    onPrimary: TachColors.onMint,
-    surface: TachColors.paper,
-    onSurface: TachColors.ink,
-    outline: TachColors.line,
-  ),
-  scaffoldBackgroundColor: TachColors.paper,
-  textTheme: _textTheme(TachColors.ink, TachColors.inkSoft),
-  appBarTheme: const AppBarTheme(
-    backgroundColor: TachColors.paper,
-    foregroundColor: TachColors.ink,
-    elevation: 0,
-    scrolledUnderElevation: 0,
-    centerTitle: true,
-    titleTextStyle: TextStyle(
-      fontFamily: _family,
-      fontSize: 17,
-      fontWeight: FontWeight.w600,
-      color: TachColors.ink,
-    ),
-  ),
-  filledButtonTheme: FilledButtonThemeData(style: _pillButton),
-  outlinedButtonTheme: OutlinedButtonThemeData(
-    style: _pillButton.copyWith(
-      foregroundColor: const WidgetStatePropertyAll(TachColors.ink),
-      side: const WidgetStatePropertyAll(BorderSide(color: TachColors.line)),
-    ),
-  ),
-  dividerTheme: const DividerThemeData(color: TachColors.line, thickness: 1),
-  // Chữ nút dạng văn bản dùng xanh đậm: xanh bạc hà trên nền trắng khó đọc.
-  textButtonTheme: TextButtonThemeData(
-    style: TextButton.styleFrom(
-      foregroundColor: TachColors.mintDeep,
-      textStyle: const TextStyle(
-        fontFamily: _family,
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-      ),
-    ),
-  ),
-  dialogTheme: const DialogThemeData(
-    backgroundColor: TachColors.paper,
-    surfaceTintColor: Colors.transparent,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(24)),
-    ),
-    titleTextStyle: TextStyle(
-      fontFamily: _family,
-      fontSize: 20,
-      fontWeight: FontWeight.w600,
-      height: 1.3,
-      color: TachColors.ink,
-    ),
-    contentTextStyle: TextStyle(
-      fontFamily: _family,
-      fontSize: 16,
-      height: 1.45,
-      color: TachColors.inkSoft,
-    ),
-  ),
+  fontSize: 17,
+  fontWeight: FontWeight.w600,
+  color: Colors.white,
 );
 
-final tachNightTheme = ThemeData(
+/// App chỉ có một theme, nền tối, để các màn phụ liền mạch với camera và
+/// bảng tin.
+final tachTheme = ThemeData(
   brightness: Brightness.dark,
   fontFamily: _family,
   // Chỉ có tác dụng với bộ icon Symbols; nét đậm cho dễ thấy trên nền ảnh.
@@ -125,8 +68,82 @@ final tachNightTheme = ThemeData(
         onPrimary: TachColors.onMint,
         surface: TachColors.night,
         onSurface: Colors.white,
+        onSurfaceVariant: TachColors.soft,
+        outline: TachColors.hairline,
+        error: TachColors.danger,
       ),
   scaffoldBackgroundColor: TachColors.night,
-  textTheme: _textTheme(Colors.white, Colors.white.withValues(alpha: 0.62)),
-  filledButtonTheme: FilledButtonThemeData(style: _pillButton),
+  textTheme: _textTheme(Colors.white, TachColors.soft),
+  appBarTheme: const AppBarTheme(
+    backgroundColor: TachColors.night,
+    foregroundColor: Colors.white,
+    elevation: 0,
+    scrolledUnderElevation: 0,
+    centerTitle: true,
+    titleTextStyle: _title,
+  ),
+  filledButtonTheme: FilledButtonThemeData(
+    style: _pillButton.copyWith(
+      backgroundColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.disabled)
+            ? TachColors.fill
+            : TachColors.mint,
+      ),
+      foregroundColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.disabled)
+            ? Colors.white.withValues(alpha: 0.4)
+            : TachColors.onMint,
+      ),
+    ),
+  ),
+  outlinedButtonTheme: OutlinedButtonThemeData(
+    style: _pillButton.copyWith(
+      foregroundColor: const WidgetStatePropertyAll(Colors.white),
+      side: const WidgetStatePropertyAll(BorderSide(color: Color(0x4DFFFFFF))),
+    ),
+  ),
+  dividerTheme: const DividerThemeData(
+    color: TachColors.hairline,
+    thickness: 1,
+  ),
+  textButtonTheme: TextButtonThemeData(
+    style: TextButton.styleFrom(
+      foregroundColor: TachColors.mintLight,
+      textStyle: const TextStyle(
+        fontFamily: _family,
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  ),
+  bottomSheetTheme: const BottomSheetThemeData(
+    backgroundColor: TachColors.night,
+    modalBackgroundColor: TachColors.night,
+    surfaceTintColor: Colors.transparent,
+    dragHandleColor: Color(0x4DFFFFFF),
+  ),
+  listTileTheme: const ListTileThemeData(
+    iconColor: Colors.white,
+    textColor: Colors.white,
+  ),
+  dialogTheme: const DialogThemeData(
+    backgroundColor: TachColors.nightRaised,
+    surfaceTintColor: Colors.transparent,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(24)),
+    ),
+    titleTextStyle: TextStyle(
+      fontFamily: _family,
+      fontSize: 20,
+      fontWeight: FontWeight.w600,
+      height: 1.3,
+      color: Colors.white,
+    ),
+    contentTextStyle: TextStyle(
+      fontFamily: _family,
+      fontSize: 16,
+      height: 1.45,
+      color: TachColors.soft,
+    ),
+  ),
 );

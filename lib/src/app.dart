@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -24,7 +25,12 @@ class TachApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Tach',
         debugShowCheckedModeBanner: false,
-        theme: tachLightTheme,
+        theme: tachTheme,
+        // Nền app tối ở mọi màn, nên thanh trạng thái luôn dùng chữ sáng.
+        builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle.light,
+          child: child!,
+        ),
         home: const LaunchGate(),
       ),
     );

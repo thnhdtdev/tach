@@ -181,13 +181,13 @@ class GroupScreen extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: const BoxDecoration(
-                  color: TachColors.mintWash,
+                  color: TachColors.mintTint,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   group.type.icon,
                   size: 28,
-                  color: TachColors.mintDeep,
+                  color: TachColors.mintLight,
                 ),
               ),
               const SizedBox(width: 14),
@@ -212,7 +212,6 @@ class GroupScreen extends StatelessWidget {
                 onPressed: () => showModalBottomSheet<void>(
                   context: context,
                   isScrollControlled: true,
-                  backgroundColor: TachColors.paper,
                   showDragHandle: true,
                   builder: (_) => NameEditSheet(
                     title: 'Đổi tên nhóm',

@@ -59,13 +59,13 @@ class GroupsSheet extends StatelessWidget {
                         width: 44,
                         height: 44,
                         decoration: const BoxDecoration(
-                          color: TachColors.mintWash,
+                          color: TachColors.mintTint,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           group.type.icon,
                           size: 22,
-                          color: TachColors.mintDeep,
+                          color: TachColors.mintLight,
                         ),
                       ),
                       title: Text(

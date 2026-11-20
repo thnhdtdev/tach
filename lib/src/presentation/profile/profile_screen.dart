@@ -31,7 +31,6 @@ class ProfileScreen extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: TachColors.paper,
       showDragHandle: true,
       builder: (_) =>
           BlocProvider.value(value: context.read<LedgerCubit>(), child: sheet),
@@ -60,7 +59,6 @@ class ProfileScreen extends StatelessWidget {
   Future<void> _changeAvatar(BuildContext context, bool hasPhoto) async {
     final action = await showModalBottomSheet<_AvatarAction>(
       context: context,
-      backgroundColor: TachColors.paper,
       showDragHandle: true,
       builder: (_) => _AvatarOptions(hasPhoto: hasPhoto),
     );
@@ -103,7 +101,6 @@ class ProfileScreen extends StatelessWidget {
   Future<void> _addGroup(BuildContext context) async {
     final create = await showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: TachColors.paper,
       showDragHandle: true,
       builder: (sheetContext) => SafeArea(
         top: false,
@@ -112,13 +109,13 @@ class ProfileScreen extends StatelessWidget {
           children: [
             ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-              leading: const Icon(Icons.add, color: TachColors.ink),
+              leading: const Icon(Icons.add, color: Colors.white),
               title: const Text('Tạo nhóm mới'),
               onTap: () => Navigator.of(sheetContext).pop(true),
             ),
             ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-              leading: const Icon(Icons.pin_outlined, color: TachColors.ink),
+              leading: const Icon(Icons.pin_outlined, color: Colors.white),
               title: const Text('Vào nhóm bằng mã mời'),
               onTap: () => Navigator.of(sheetContext).pop(false),
             ),
@@ -354,7 +351,7 @@ class _Card extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: TachColors.line.withValues(alpha: 0.45),
+      color: TachColors.nightRaised,
       borderRadius: BorderRadius.circular(20),
       clipBehavior: Clip.antiAlias,
       child: Padding(
@@ -400,10 +397,10 @@ class _QuickAction extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: const BoxDecoration(
-                  color: TachColors.mintWash,
+                  color: TachColors.mintTint,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 26, color: TachColors.mintDeep),
+                child: Icon(icon, size: 26, color: TachColors.mintLight),
               ),
               const SizedBox(height: 8),
               Text(
@@ -446,13 +443,13 @@ class _GroupRow extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: const BoxDecoration(
-                color: TachColors.mintWash,
+                color: TachColors.mintTint,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 group.type.icon,
                 size: 22,
-                color: TachColors.mintDeep,
+                color: TachColors.mintLight,
               ),
             ),
             const SizedBox(width: 12),
@@ -478,13 +475,13 @@ class _GroupRow extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: TachColors.mintWash,
+                            color: TachColors.mintTint,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             'Đang mở',
                             style: text.bodySmall?.copyWith(
-                              color: TachColors.mintDeep,
+                              color: TachColors.mintLight,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -502,14 +499,14 @@ class _GroupRow extends StatelessWidget {
                           ? 'Bạn cần trả ${formatVnd(-net)}'
                           : 'Bạn được nhận ${formatVnd(net)}',
                       style: text.bodySmall?.copyWith(
-                        color: net < 0 ? TachColors.ink : TachColors.mintDeep,
+                        color: net < 0 ? Colors.white : TachColors.mintLight,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: TachColors.inkSoft),
+            const Icon(Icons.chevron_right, color: TachColors.soft),
           ],
         ),
       ),
@@ -535,7 +532,7 @@ class _SettingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final color = danger ? TachColors.danger : TachColors.ink;
+    final color = danger ? TachColors.danger : Colors.white;
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -562,7 +559,7 @@ class _SettingRow extends StatelessWidget {
               ),
             ),
             if (!danger)
-              const Icon(Icons.chevron_right, color: TachColors.inkSoft),
+              const Icon(Icons.chevron_right, color: TachColors.soft),
           ],
         ),
       ),
@@ -596,14 +593,14 @@ class _EditableAvatar extends StatelessWidget {
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: TachColors.paper,
+                  color: TachColors.nightRaised,
                   shape: BoxShape.circle,
-                  border: Border.all(color: TachColors.line),
+                  border: Border.all(color: TachColors.hairline),
                 ),
                 child: const Icon(
                   Icons.photo_camera_outlined,
                   size: 16,
-                  color: TachColors.ink,
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -626,7 +623,7 @@ class _AvatarOptions extends StatelessWidget {
     Widget option(IconData icon, String label, _AvatarAction action) {
       return ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-        leading: Icon(icon, color: TachColors.ink),
+        leading: Icon(icon, color: Colors.white),
         title: Text(label, style: text.bodyLarge),
         onTap: () => Navigator.of(context).pop(action),
       );

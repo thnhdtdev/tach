@@ -13,6 +13,8 @@ import '../jar/jar_sheet.dart';
 import '../jar/jar_view.dart';
 import '../ledger/ledger_cubit.dart';
 import '../widgets/expense_photo.dart';
+import '../widgets/side_slide_route.dart';
+import '../widgets/swipe_to_close.dart';
 import 'month_calendar.dart';
 
 enum _Mode { calendar, grid }
@@ -74,6 +76,13 @@ class _MonthScreenState extends State<MonthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return SwipeToClose(
+      towardsRight: !openedFromLeft(context),
+      child: _screen(context),
+    );
+  }
+
+  Widget _screen(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final state = context.watch<LedgerCubit>().state;
     final budget = budgetFor(context.watch<BudgetCubit>().state, _month);
@@ -95,7 +104,8 @@ class _MonthScreenState extends State<MonthScreen> {
     void setJar() => showJarSheet(context, month: _month, current: budget);
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: sideAppBar(
+        context,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

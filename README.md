@@ -107,6 +107,7 @@ thử; máy khác thì lấy id bằng `flutter devices`):
 
 ```bash
 flutter run -d 00008110-00167DD03AE1401E --dart-define-from-file=.env
+flutter run --release -d 00008110-00167DD03AE1401E --dart-define-from-file=.env
 ```
 
 Chạy test:

@@ -20,6 +20,7 @@ import '../ledger/ledger_cubit.dart';
 import '../month/month_screen.dart';
 import '../profile/profile_screen.dart';
 import '../widgets/member_avatar.dart';
+import '../widgets/side_slide_route.dart';
 import '../widgets/tach_mark.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -131,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _openMonth() async {
     final picked = await Navigator.of(context).push<PickedExpense>(
-      MaterialPageRoute(builder: (_) => const MonthScreen()),
+      SideSlideRoute(fromLeft: true, builder: (_) => const MonthScreen()),
     );
     if (picked == null || !mounted) return;
     // Lịch gộp mọi nhóm, nên khoản được chọn có thể thuộc nhóm khác.
@@ -147,8 +148,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _openBalance() {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const BalanceScreen()));
+    Navigator.of(context).push(
+      SideSlideRoute<void>(
+        fromLeft: false,
+        builder: (_) => const BalanceScreen(),
+      ),
+    );
   }
 
   Future<void> _openGroups() async {
@@ -180,7 +185,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _openProfile() {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
+      SideSlideRoute<void>(
+        fromLeft: false,
         builder: (_) => ProfileScreen(
           onSignOut: () {
             Navigator.of(context).popUntil((route) => route.isFirst);
@@ -193,8 +199,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _onSwipeEnd(DragEndDetails details) {
     final velocity = details.primaryVelocity ?? 0;
-    final draggedFar = _swipeDx < -72 && velocity <= 0;
-    if (draggedFar || velocity < -600) _openProfile();
+    final towardsLeft = (_swipeDx < -72 && velocity <= 0) || velocity < -600;
+    final towardsRight = (_swipeDx > 72 && velocity >= 0) || velocity > 600;
+    if (towardsLeft) {
+      // Vuốt từ phải sang trái: màn mới vào từ bên phải. Ở camera là hồ sơ,
+      // đang xem bảng tin là số dư.
+      if (_onFeed) {
+        _openBalance();
+      } else {
+        _openProfile();
+      }
+    } else if (towardsRight) {
+      // Vuốt từ trái sang phải: lịch tháng vào từ bên trái.
+      if (context.read<LedgerCubit>().state.hasGroup) _openMonth();
+    }
   }
 
   @override

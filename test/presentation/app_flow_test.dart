@@ -18,6 +18,8 @@ import 'package:tach/src/services/photo/photo_sharer.dart';
 import 'package:tach/src/presentation/feed/feed_background.dart';
 import 'package:tach/src/presentation/home/home_screen.dart';
 import 'package:tach/src/presentation/ledger/ledger_cubit.dart';
+import 'package:tach/src/presentation/month/month_screen.dart';
+import 'package:tach/src/presentation/profile/profile_screen.dart';
 import 'package:tach/src/presentation/widgets/expense_photo.dart';
 
 final _tinyPng = base64Decode(
@@ -905,34 +907,102 @@ void main() {
     },
   );
 
-  testWidgets('vuốt từ phải sang trái ở camera và bảng tin thì mở hồ sơ', (
-    tester,
-  ) async {
-    await _launch(tester);
-    await _signIn(tester);
-    final preview = find.byKey(const ValueKey('live-preview'));
+  testWidgets(
+    'vuốt từ phải sang trái: ở camera mở hồ sơ, ở bảng tin mở số dư, vuốt ngược lại thì về',
+    (tester) async {
+      await _launch(tester);
+      await _signIn(tester);
+      final preview = find.byKey(const ValueKey('live-preview'));
 
-    await tester.drag(preview, const Offset(200, 0));
-    await tester.pumpAndSettle();
-    await tester.drag(preview, const Offset(-40, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Nhóm của bạn'), findsNothing);
+      await tester.drag(preview, const Offset(-40, 0));
+      await tester.pumpAndSettle();
+      expect(find.byType(ProfileScreen), findsNothing);
 
-    await tester.drag(preview, const Offset(-200, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Nhóm của bạn'), findsOneWidget);
-    expect(_camera.zooms, isEmpty);
+      await tester.drag(preview, const Offset(-200, 0));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(
+        tester.getTopLeft(find.byType(ProfileScreen)).dx,
+        greaterThan(0),
+        reason: 'Hồ sơ đang trượt vào từ cạnh phải',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Nhóm của bạn'), findsOneWidget);
+      expect(_camera.zooms, isEmpty);
 
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('vừa ghi'));
-    await tester.pumpAndSettle();
-    expect(find.text('Minh'), findsOneWidget);
+      await tester.drag(find.text('Nhóm của bạn'), const Offset(40, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Nhóm của bạn'), findsOneWidget);
+      await tester.drag(find.text('Nhóm của bạn'), const Offset(200, 0));
+      await tester.pumpAndSettle();
+      expect(find.byType(ProfileScreen), findsNothing);
+      expect(find.byType(MonthScreen), findsNothing);
+      expect(find.bySemanticsLabel('Chụp'), findsOneWidget);
 
-    await tester.fling(find.text('30.000đ'), const Offset(-60, 0), 1500);
-    await tester.pumpAndSettle();
-    expect(find.text('Nhóm của bạn'), findsOneWidget);
-  });
+      await tester.tap(find.textContaining('vừa ghi'));
+      await tester.pumpAndSettle();
+      expect(find.text('Minh'), findsOneWidget);
+
+      await tester.fling(find.text('30.000đ'), const Offset(-60, 0), 1500);
+      await tester.pumpAndSettle();
+      expect(find.text('Trả cho ai'), findsOneWidget);
+      expect(find.byType(ProfileScreen), findsNothing);
+
+      await tester.fling(find.text('Trả cho ai'), const Offset(60, 0), 1500);
+      await tester.pumpAndSettle();
+      expect(find.text('Trả cho ai'), findsNothing);
+      expect(find.byType(MonthScreen), findsNothing);
+      expect(find.text('30.000đ'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'vuốt từ trái sang phải mở lịch tháng từ bên trái, vuốt ngược lại thì về',
+    (tester) async {
+      await _launch(tester);
+      await _signIn(tester);
+      final preview = find.byKey(const ValueKey('live-preview'));
+
+      await tester.drag(preview, const Offset(40, 0));
+      await tester.pumpAndSettle();
+      expect(find.byType(MonthScreen), findsNothing);
+
+      await tester.drag(preview, const Offset(200, 0));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(
+        tester.getTopLeft(find.byType(MonthScreen)).dx,
+        lessThan(0),
+        reason: 'Màn tháng đang trượt vào từ cạnh trái',
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(find.byType(MonthScreen)).dx, 0);
+      expect(find.text('Hũ của tôi'), findsOneWidget);
+
+      await tester.drag(find.text('Hũ của tôi'), const Offset(-200, 0));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(
+        tester.getTopLeft(find.byType(MonthScreen)).dx,
+        lessThan(0),
+        reason: 'Màn tháng trượt ra về bên trái',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(MonthScreen), findsNothing);
+      expect(find.bySemanticsLabel('Chụp'), findsOneWidget);
+
+      await tester.tap(find.textContaining('vừa ghi'));
+      await tester.pumpAndSettle();
+      await tester.fling(find.text('30.000đ'), const Offset(60, 0), 1500);
+      await tester.pumpAndSettle();
+      expect(find.byType(MonthScreen), findsOneWidget);
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byType(MonthScreen), findsNothing);
+      expect(find.text('30.000đ'), findsOneWidget);
+    },
+  );
 
   testWidgets('đang gõ số tiền thì vuốt ngang không mở hồ sơ', (tester) async {
     await _launch(tester);
@@ -947,6 +1017,12 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Nhóm của bạn'), findsNothing);
+    await tester.dragFrom(
+      tester.getCenter(find.byType(ExpensePhoto)),
+      const Offset(250, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(MonthScreen), findsNothing);
     expect(find.byKey(const ValueKey('key-0')), findsOneWidget);
   });
 

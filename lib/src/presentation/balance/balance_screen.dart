@@ -11,6 +11,8 @@ import '../ledger/ledger_cubit.dart';
 import '../widgets/member_avatar.dart';
 import '../widgets/section_title.dart';
 import 'vietqr_sheet.dart';
+import '../widgets/side_slide_route.dart';
+import '../widgets/swipe_to_close.dart';
 
 class BalanceScreen extends StatelessWidget {
   const BalanceScreen({super.key});
@@ -52,136 +54,139 @@ class BalanceScreen extends StatelessWidget {
         ? 'Bạn được nhận'
         : 'Bạn không nợ ai';
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Số dư')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        children: [
-          Text(state.group.name, style: text.bodyMedium),
-          Text(headline, style: text.titleLarge),
-          if (myNet != 0)
+    return SwipeToClose(
+      towardsRight: !openedFromLeft(context),
+      child: Scaffold(
+        appBar: sideAppBar(context, title: const Text('Số dư')),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          children: [
+            Text(state.group.name, style: text.bodyMedium),
+            Text(headline, style: text.titleLarge),
+            if (myNet != 0)
+              Text(
+                formatVnd(myNet.abs()),
+                style: text.displayLarge?.copyWith(
+                  color: myNet < 0 ? TachColors.mint : TachColors.mintLight,
+                ),
+              ),
+            const SizedBox(height: 6),
             Text(
-              formatVnd(myNet.abs()),
-              style: text.displayLarge?.copyWith(
-                color: myNet < 0 ? TachColors.mint : TachColors.mintLight,
-              ),
+              transfers.isEmpty
+                  ? 'Cả nhóm đã sòng phẳng.'
+                  : 'Đã gộp nợ chéo: cả nhóm chỉ cần ${transfers.length} '
+                        'lần chuyển khoản.',
+              style: text.bodyMedium,
             ),
-          const SizedBox(height: 6),
-          Text(
-            transfers.isEmpty
-                ? 'Cả nhóm đã sòng phẳng.'
-                : 'Đã gộp nợ chéo: cả nhóm chỉ cần ${transfers.length} '
-                      'lần chuyển khoản.',
-            style: text.bodyMedium,
-          ),
-          if (toPay.isNotEmpty) ...[
-            const SectionTitle('Trả cho ai'),
-            for (final t in toPay)
-              _PersonRow(
-                name: state.member(t.toId).name,
-                tone: state.toneOf(t.toId),
-                photo: state.member(t.toId).avatarBytes,
-                amount: t.amount,
-                trailing: state.pendingFor(t) != null
-                    ? Text(
-                        'Chờ ${state.member(t.toId).name}\nxác nhận',
-                        textAlign: TextAlign.right,
-                        style: text.bodySmall,
-                      )
-                    : FilledButton(
-                        onPressed: () => _pay(context, t),
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size(76, 44),
-                        ),
-                        child: const Text('Trả'),
-                      ),
-              ),
-          ],
-          if (toReceive.isNotEmpty) ...[
-            const SectionTitle('Sẽ trả cho bạn'),
-            for (final t in toReceive)
-              _PersonRow(
-                name: state.member(t.fromId).name,
-                tone: state.toneOf(t.fromId),
-                photo: state.member(t.fromId).avatarBytes,
-                amount: t.amount,
-                caption: state.pendingFor(t) != null
-                    ? 'Báo đã chuyển khoản'
-                    : null,
-                trailing: state.pendingFor(t) == null
-                    ? null
-                    : OutlinedButton(
-                        onPressed: () =>
-                            cubit.confirmReceived(state.pendingFor(t)!.id),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(76, 44),
-                        ),
-                        child: const Text('Đã nhận'),
-                      ),
-              ),
-          ],
-          if (others.isNotEmpty) ...[
-            const SectionTitle('Trong nhóm'),
-            for (final t in others)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${state.member(t.fromId).name} trả '
-                        '${state.member(t.toId).name}',
-                        style: text.bodyLarge,
-                      ),
-                    ),
-                    Text(
-                      formatVnd(t.amount),
-                      style: text.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-          if (paid.isNotEmpty) ...[
-            const SectionTitle('Đã trả'),
-            for (final s in paid)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.done_all,
-                      size: 20,
-                      color: TachColors.paid,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        '${state.displayName(s.fromId)} trả '
-                        '${s.toId == state.meId ? 'bạn' : state.member(s.toId).name}',
-                        style: text.bodyLarge,
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          formatVnd(s.amount),
-                          style: text.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: TachColors.paid,
+            if (toPay.isNotEmpty) ...[
+              const SectionTitle('Trả cho ai'),
+              for (final t in toPay)
+                _PersonRow(
+                  name: state.member(t.toId).name,
+                  tone: state.toneOf(t.toId),
+                  photo: state.member(t.toId).avatarBytes,
+                  amount: t.amount,
+                  trailing: state.pendingFor(t) != null
+                      ? Text(
+                          'Chờ ${state.member(t.toId).name}\nxác nhận',
+                          textAlign: TextAlign.right,
+                          style: text.bodySmall,
+                        )
+                      : FilledButton(
+                          onPressed: () => _pay(context, t),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size(76, 44),
                           ),
+                          child: const Text('Trả'),
                         ),
-                        Text(timeAgo(s.createdAt), style: text.bodySmall),
-                      ],
-                    ),
-                  ],
                 ),
-              ),
+            ],
+            if (toReceive.isNotEmpty) ...[
+              const SectionTitle('Sẽ trả cho bạn'),
+              for (final t in toReceive)
+                _PersonRow(
+                  name: state.member(t.fromId).name,
+                  tone: state.toneOf(t.fromId),
+                  photo: state.member(t.fromId).avatarBytes,
+                  amount: t.amount,
+                  caption: state.pendingFor(t) != null
+                      ? 'Báo đã chuyển khoản'
+                      : null,
+                  trailing: state.pendingFor(t) == null
+                      ? null
+                      : OutlinedButton(
+                          onPressed: () =>
+                              cubit.confirmReceived(state.pendingFor(t)!.id),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(76, 44),
+                          ),
+                          child: const Text('Đã nhận'),
+                        ),
+                ),
+            ],
+            if (others.isNotEmpty) ...[
+              const SectionTitle('Trong nhóm'),
+              for (final t in others)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${state.member(t.fromId).name} trả '
+                          '${state.member(t.toId).name}',
+                          style: text.bodyLarge,
+                        ),
+                      ),
+                      Text(
+                        formatVnd(t.amount),
+                        style: text.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+            if (paid.isNotEmpty) ...[
+              const SectionTitle('Đã trả'),
+              for (final s in paid)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.done_all,
+                        size: 20,
+                        color: TachColors.paid,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '${state.displayName(s.fromId)} trả '
+                          '${s.toId == state.meId ? 'bạn' : state.member(s.toId).name}',
+                          style: text.bodyLarge,
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            formatVnd(s.amount),
+                            style: text.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: TachColors.paid,
+                            ),
+                          ),
+                          Text(timeAgo(s.createdAt), style: text.bodySmall),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

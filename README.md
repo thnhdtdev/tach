@@ -62,8 +62,14 @@ Giao diện MVP đã dựng xong. App chạy theo hai cách:
 - **Dữ liệu mẫu** (không truyền gì): mọi thứ chỉ sống trong bộ nhớ
   (`lib/src/datasource/sample/`), dùng cho test và để xem giao diện.
 
-Chưa có: đăng nhập Apple, Google, số điện thoại; thông báo đẩy; widget màn
-hình chính. Trên máy không có camera (trình giả lập), bản debug cho chụp ảnh
+Widget màn hình chính có trên iOS (`ios/TachWidget/`): cỡ nhỏ hiện khoản chi
+mới nhất kèm ảnh, cỡ vừa hiện số tiền bạn cần trả hoặc được nhận trong nhóm
+đang mở. App ghi dữ liệu cho widget qua App Group `group.vn.tachapp.tach` mỗi
+khi sổ thay đổi, nên widget chỉ mới lại khi app được mở; muốn widget tự đổi
+lúc app đóng thì cần thông báo đẩy.
+
+Chưa có: đăng nhập Apple, Google, số điện thoại; thông báo đẩy; widget trên
+Android. Trên máy không có camera (trình giả lập), bản debug cho chụp ảnh
 mẫu.
 
 Font chữ là Montserrat, giấy phép SIL Open Font License

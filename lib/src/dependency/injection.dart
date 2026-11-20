@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -7,6 +8,7 @@ import '../domain/repositories/group_repository.dart';
 import '../services/auth/auth_service.dart';
 import '../services/avatar/avatar_picker.dart';
 import '../services/camera/capture_camera.dart';
+import '../services/home_widget/home_widget_updater.dart';
 import '../services/photo/photo_loader.dart';
 import '../services/photo/photo_sharer.dart';
 import '../services/preferences/app_preferences.dart';
@@ -18,6 +20,12 @@ void configureDependencies({SupabaseClient? supabase}) {
     ..registerLazySingleton<AppPreferences>(AppPreferences.new)
     ..registerLazySingleton<AvatarPicker>(ImagePickerAvatarPicker.new)
     ..registerLazySingleton<PhotoSharer>(SystemPhotoSharer.new)
+    // Widget mới chỉ có trên iOS.
+    ..registerLazySingleton<HomeWidgetUpdater>(
+      () => defaultTargetPlatform == TargetPlatform.iOS
+          ? SystemHomeWidgetUpdater()
+          : NoHomeWidgetUpdater(),
+    )
     ..registerFactory<CaptureCamera>(PluginCaptureCamera.new);
 
   if (supabase == null) {

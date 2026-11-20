@@ -41,6 +41,63 @@ void main() {
     expect(cubit.state.myNet, before - owedToMe);
   });
 
+  test(
+    'sửa khoản mình ghi: chia lại theo số tiền và người mới, có dấu đã sửa',
+    () {
+      final state = cubit.state;
+      final mine = state.expenses.firstWhere((e) => e.payerId == state.meId);
+      final other = state.group.members
+          .firstWhere((m) => m.id != state.meId)
+          .id;
+      final owedBefore = mine.amount - (mine.splits[state.meId] ?? 0);
+
+      final edited = cubit.editExpense(
+        mine.id,
+        amount: 90000,
+        note: ' Gạo nếp ',
+        participantIds: [state.meId, other],
+      );
+
+      expect(edited, isTrue);
+      final after = cubit.state.expenses.firstWhere((e) => e.id == mine.id);
+      expect(after.amount, 90000);
+      expect(after.note, 'Gạo nếp');
+      expect(after.splits, {state.meId: 45000, other: 45000});
+      expect(after.editedAt, isNotNull);
+      expect(after.createdAt, mine.createdAt);
+      expect(cubit.state.myNet, state.myNet - owedBefore + 45000);
+    },
+  );
+
+  test(
+    'sửa mà không đổi gì, hoặc sửa khoản người khác, thì không có gì xảy ra',
+    () {
+      final state = cubit.state;
+      final mine = state.expenses.firstWhere((e) => e.payerId == state.meId);
+      final theirs = state.expenses.firstWhere((e) => e.payerId != state.meId);
+
+      expect(
+        cubit.editExpense(
+          mine.id,
+          amount: mine.amount,
+          note: mine.note,
+          participantIds: mine.splits.keys.toList(),
+        ),
+        isFalse,
+      );
+      expect(
+        cubit.editExpense(
+          theirs.id,
+          amount: 1000,
+          note: '',
+          participantIds: [state.meId],
+        ),
+        isFalse,
+      );
+      expect(cubit.state.expenses.every((e) => e.editedAt == null), isTrue);
+    },
+  );
+
   test('khoản người khác ghi thì không xóa được', () {
     final theirs = cubit.state.expenses.firstWhere(
       (e) => e.payerId != cubit.state.meId,

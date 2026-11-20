@@ -45,6 +45,9 @@ abstract interface class GroupRepository {
   Future<void> deleteGroup(String groupId);
 
   Future<void> addExpense(String groupId, Expense expense);
+
+  /// Ghi lại số tiền, ghi chú và phần chia của một khoản đã có.
+  Future<void> updateExpense(Expense expense);
   Future<void> deleteExpense(String groupId, String expenseId);
 
   Future<void> setReaction(String expenseId, String? emoji);

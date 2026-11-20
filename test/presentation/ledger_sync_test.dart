@@ -139,6 +139,22 @@ class _FakeServer implements GroupRepository {
   }
 
   @override
+  Future<void> updateExpense(Expense expense) async {
+    await _call('updateExpense ${expense.amount}');
+    for (final id in groups.keys.toList()) {
+      final group = groups[id]!;
+      groups[id] = GroupSnapshot(
+        group: group.group,
+        expenses: [
+          for (final e in group.expenses)
+            if (e.id == expense.id) expense else e,
+        ],
+        settlements: group.settlements,
+      );
+    }
+  }
+
+  @override
   Future<void> setReaction(String expenseId, String? emoji) =>
       _call('setReaction $emoji');
 
@@ -297,6 +313,31 @@ void main() {
       await settle();
       expect(server.calls, ['addExpense Trứng', 'deleteExpense']);
       expect(server.groups['g-1']!.expenses, isEmpty);
+    },
+  );
+
+  test(
+    'sửa khoản vừa ghi: ghi xong mới sửa, tải lại vẫn giữ bản đã sửa',
+    () async {
+      final expense = cubit.addExpense(
+        amount: 30000,
+        note: 'Trứng',
+        participantIds: ['u-an', 'u-minh'],
+      );
+      cubit.editExpense(
+        expense.id,
+        amount: 45000,
+        note: 'Trứng, sữa',
+        participantIds: ['u-minh'],
+      );
+      expect(cubit.state.myNet, 45000);
+
+      await cubit.refresh();
+      expect(server.calls, ['addExpense Trứng', 'updateExpense 45000']);
+      final saved = cubit.state.expenses.single;
+      expect(saved.note, 'Trứng, sữa');
+      expect(saved.splits, {'u-minh': 45000});
+      expect(saved.editedAt, isNotNull);
     },
   );
 

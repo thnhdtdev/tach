@@ -13,6 +13,7 @@ import '../ledger/ledger_cubit.dart';
 import '../widgets/expense_photo.dart';
 import '../widgets/member_avatar.dart';
 import 'comments_sheet.dart';
+import 'edit_expense_sheet.dart';
 import 'reaction_picker_sheet.dart';
 
 class ExpensePage extends StatelessWidget {
@@ -94,6 +95,14 @@ class ExpensePage extends StatelessWidget {
               if (_isMine)
                 ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('Sửa khoản chi'),
+                  onTap: () =>
+                      Navigator.of(sheetContext).pop(_ExpenseAction.edit),
+                ),
+              if (_isMine)
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
                   leading: const Icon(Icons.delete_outline),
                   iconColor: TachColors.danger,
                   textColor: TachColors.danger,
@@ -111,10 +120,34 @@ class ExpensePage extends StatelessWidget {
     switch (action) {
       case _ExpenseAction.share:
         await _share(context);
+      case _ExpenseAction.edit:
+        await _edit(context);
       case _ExpenseAction.delete:
         await _delete(context);
       case null:
     }
+  }
+
+  Future<void> _edit(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final edited = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: TachColors.paper,
+      builder: (_) => Theme(
+        data: tachLightTheme,
+        child: BlocProvider.value(
+          value: context.read<LedgerCubit>(),
+          child: EditExpenseSheet(expense: expense),
+        ),
+      ),
+    );
+    if (edited != true) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('Đã sửa khoản chi.')));
   }
 
   Future<void> _share(BuildContext context) async {
@@ -243,7 +276,12 @@ class ExpensePage extends StatelessWidget {
                         state.displayName(expense.payerId),
                         style: text.labelLarge,
                       ),
-                      Text(timeAgo(expense.createdAt), style: text.bodySmall),
+                      Text(
+                        expense.editedAt == null
+                            ? timeAgo(expense.createdAt)
+                            : '${timeAgo(expense.createdAt)} · đã sửa',
+                        style: text.bodySmall,
+                      ),
                     ],
                   ),
                 ),
@@ -467,4 +505,4 @@ class ExpensePage extends StatelessWidget {
   }
 }
 
-enum _ExpenseAction { share, delete }
+enum _ExpenseAction { share, edit, delete }

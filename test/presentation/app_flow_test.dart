@@ -621,6 +621,54 @@ void main() {
   );
 
   testWidgets(
+    'sửa khoản mình ghi: đổi số tiền và người chia, bảng tin hiện đã sửa',
+    (tester) async {
+      await _launch(tester);
+      await _signIn(tester);
+      final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+
+      await tester.tap(find.textContaining('vừa ghi'));
+      await tester.pumpAndSettle();
+      await tester.fling(find.byType(PageView), const Offset(0, -400), 2000);
+      await tester.pumpAndSettle();
+      await tester.fling(find.byType(PageView), const Offset(0, -400), 2000);
+      await tester.pumpAndSettle();
+      expect(find.text('Gạo 5kg'), findsOneWidget);
+      expect(find.textContaining('đã sửa'), findsNothing);
+      final rice = cubit.state.expenses.firstWhere((e) => e.note == 'Gạo 5kg');
+
+      await tester.tap(find.byTooltip('Tùy chọn'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sửa khoản chi'));
+      await tester.pumpAndSettle();
+      final save = find.widgetWithText(FilledButton, 'Lưu thay đổi');
+      expect(tester.widget<FilledButton>(save).onPressed, isNull);
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Số tiền'),
+        '200000',
+      );
+      await tester.pump();
+      expect(find.text('200.000'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilterChip, 'Hùng'));
+      await tester.pump();
+      expect(find.text('Chia đều 3 người, mỗi người 66.666đ'), findsOneWidget);
+
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(find.text('Đã sửa khoản chi.'), findsOneWidget);
+      expect(find.text('200.000đ'), findsOneWidget);
+      expect(find.textContaining('đã sửa'), findsOneWidget);
+
+      final edited = cubit.state.expenses.firstWhere((e) => e.id == rice.id);
+      expect(edited.amount, 200000);
+      expect(edited.splits.length, rice.splits.length - 1);
+      expect(edited.splits.values.reduce((a, b) => a + b), 200000);
+      await tester.pump(const Duration(seconds: 4));
+    },
+  );
+
+  testWidgets(
     'xóa khoản chi duy nhất của nhóm: về camera, thanh bảng tin ẩn đi',
     (tester) async {
       await _launch(tester);

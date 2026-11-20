@@ -21,7 +21,7 @@ class SupabaseGroupRepository implements GroupRepository {
   static const _groupColumns =
       'id, name, code, type, invite_code, created_by, '
       'group_members(user_id, joined_at, left_at, profiles($_profileColumns)), '
-      'expenses(id, payer_id, amount, note, photo_path, created_at, '
+      'expenses(id, payer_id, amount, note, photo_path, created_at, edited_at, '
       'expense_splits(user_id, amount), reactions(user_id, emoji), '
       'comments(id, user_id, parent_id, text, created_at)), '
       'settlements(id, from_user, to_user, amount, transfer_code, status, '
@@ -152,6 +152,7 @@ class SupabaseGroupRepository implements GroupRepository {
       note: row['note'] as String,
       photoUrl: photoPath == null ? null : '$remotePhotoPrefix$photoPath',
       createdAt: DateTime.parse(row['created_at'] as String).toLocal(),
+      editedAt: DateTime.tryParse(row['edited_at'] as String? ?? '')?.toLocal(),
       splits: {
         for (final s in row['expense_splits'] as List)
           s['user_id'] as String: s['amount'] as int,
@@ -279,6 +280,19 @@ class SupabaseGroupRepository implements GroupRepository {
         'p_amount': expense.amount,
         'p_note': expense.note,
         'p_photo_path': photoPath,
+        'p_splits': expense.splits,
+      },
+    );
+  }
+
+  @override
+  Future<void> updateExpense(Expense expense) {
+    return _client.rpc<void>(
+      'update_expense',
+      params: {
+        'p_id': expense.id,
+        'p_amount': expense.amount,
+        'p_note': expense.note,
         'p_splits': expense.splits,
       },
     );

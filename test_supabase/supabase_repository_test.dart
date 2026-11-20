@@ -248,6 +248,55 @@ void main() {
       expect(loaded.reactions, {minh.id: '😂'});
       expect(loaded.comments.map((c) => c.text), ['Rẻ ghê', 'Chợ đầu ngõ đó']);
       expect(loaded.comments.last.parentId, root.id);
+      expect(loaded.editedAt, isNull);
+
+      await expectLater(
+        minh.repository.updateExpense(
+          loaded.copyWith(amount: 1000, splits: {minh.id: 1000}),
+        ),
+        throwsA(isA<PostgrestException>()),
+      );
+      await expectLater(
+        an.repository.updateExpense(
+          loaded.copyWith(
+            amount: 40000,
+            splits: {an.id: 15000, minh.id: 15000},
+          ),
+        ),
+        throwsA(isA<PostgrestException>()),
+      );
+      await expectLater(
+        an.repository.updateExpense(
+          loaded.copyWith(amount: 40000, splits: {outsider.id: 40000}),
+        ),
+        throwsA(isA<PostgrestException>()),
+      );
+      expect(
+        (await an.repository.load()).groups.single.expenses.single.amount,
+        30000,
+      );
+
+      minhSignals = 0;
+      await an.repository.updateExpense(
+        loaded.copyWith(
+          amount: 40000,
+          note: ' Trứng, sữa ',
+          splits: {minh.id: 40000},
+        ),
+      );
+      await _until(() => minhSignals > 0);
+      theirs = await minh.repository.load();
+      final edited = theirs.groups.single.expenses.single;
+      expect(edited.amount, 40000);
+      expect(edited.note, 'Trứng, sữa');
+      expect(edited.splits, {minh.id: 40000});
+      expect(edited.editedAt, isNotNull);
+      expect(edited.createdAt, loaded.createdAt);
+      expect(edited.photoUrl, loaded.photoUrl);
+      expect(edited.reactions, {minh.id: '😂'});
+      expect(edited.comments, hasLength(2));
+
+      await an.repository.updateExpense(loaded);
 
       await minh.repository.setReaction(expense.id, null);
       mine = await an.repository.load();
@@ -318,6 +367,12 @@ void main() {
       expect(mine.groups.single.group.formerMembers.map((m) => m.name), [
         'Minh',
       ]);
+
+      // Minh đã rời nhóm nhưng vẫn giữ phần của mình khi An sửa khoản chi.
+      await an.repository.updateExpense(loaded.copyWith(note: 'Trứng gà'));
+      mine = await an.repository.load();
+      expect(mine.groups.single.expenses.single.note, 'Trứng gà');
+      expect(mine.groups.single.expenses.single.splits, loaded.splits);
 
       await an.repository.deleteGroup(group.id);
       expect((await an.repository.load()).groups, isEmpty);

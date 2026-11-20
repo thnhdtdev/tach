@@ -57,8 +57,8 @@ Giao diện MVP đã dựng xong. App chạy theo hai cách:
   [supabase/README.md](supabase/README.md)): đăng nhập bằng tài khoản khách,
   dữ liệu nhóm, khoản chi, bình luận, cảm xúc, trả nợ và ảnh lưu trên máy chủ
   (`lib/src/datasource/supabase/`). Ảnh chụp được cắt vuông và nén trước khi
-  tải lên. Khi người khác trong nhóm thay đổi gì, app đang mở tự tải lại
-  (Supabase Realtime).
+  tải lên. Người ghi sửa hoặc xóa được khoản chi của mình. Khi người khác
+  trong nhóm thay đổi gì, app đang mở tự tải lại (Supabase Realtime).
 - **Dữ liệu mẫu** (không truyền gì): mọi thứ chỉ sống trong bộ nhớ
   (`lib/src/datasource/sample/`), dùng cho test và để xem giao diện.
 

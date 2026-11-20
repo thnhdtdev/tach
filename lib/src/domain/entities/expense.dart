@@ -25,6 +25,7 @@ class Expense {
     required this.note,
     required this.splits,
     required this.createdAt,
+    this.editedAt,
     this.photoUrl,
     this.photoBytes,
     this.reactions = const {},
@@ -46,19 +47,30 @@ class Expense {
   final Map<String, int> splits;
   final DateTime createdAt;
 
+  /// Lần gần nhất người ghi sửa khoản này; `null` nếu chưa sửa lần nào.
+  final DateTime? editedAt;
+
   final Map<String, String> reactions;
   final List<Comment> comments;
 
-  Expense copyWith({Map<String, String>? reactions, List<Comment>? comments}) {
+  Expense copyWith({
+    int? amount,
+    String? note,
+    Map<String, int>? splits,
+    DateTime? editedAt,
+    Map<String, String>? reactions,
+    List<Comment>? comments,
+  }) {
     return Expense(
       id: id,
       payerId: payerId,
-      amount: amount,
-      note: note,
+      amount: amount ?? this.amount,
+      note: note ?? this.note,
       photoUrl: photoUrl,
       photoBytes: photoBytes,
-      splits: splits,
+      splits: splits ?? this.splits,
       createdAt: createdAt,
+      editedAt: editedAt ?? this.editedAt,
       reactions: reactions ?? this.reactions,
       comments: comments ?? this.comments,
     );

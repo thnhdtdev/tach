@@ -342,6 +342,42 @@ class LedgerCubit extends Cubit<LedgerState> {
     return expense;
   }
 
+  /// Chỉ người ghi khoản chi mới sửa được nó, và phần chia được tính lại theo
+  /// kiểu chia đều. Trả về `false` khi không có gì thay đổi.
+  bool editExpense(
+    String expenseId, {
+    required int amount,
+    required String note,
+    required List<String> participantIds,
+  }) {
+    final index = state.expenses.indexWhere(
+      (e) => e.id == expenseId && e.payerId == state.meId,
+    );
+    if (index < 0 || amount <= 0 || participantIds.isEmpty) return false;
+    final old = state.expenses[index];
+    final splits = splitEqually(
+      amount: amount,
+      participantIds: participantIds,
+      payerId: old.payerId,
+    );
+    final trimmed = note.trim();
+    final unchanged =
+        amount == old.amount &&
+        trimmed == old.note &&
+        mapEquals(splits, old.splits);
+    if (unchanged) return false;
+
+    final edited = old.copyWith(
+      amount: amount,
+      note: trimmed,
+      splits: splits,
+      editedAt: DateTime.now(),
+    );
+    _updateExpense(expenseId, (_) => edited);
+    _save(() => _repository.updateExpense(edited));
+    return true;
+  }
+
   /// Chỉ người ghi khoản chi mới xóa được nó.
   void deleteExpense(String expenseId) {
     final mine = state.expenses.any(

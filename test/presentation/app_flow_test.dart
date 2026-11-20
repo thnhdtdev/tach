@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tach/src/app.dart';
 import 'package:tach/src/core/theme/app_colors.dart';
@@ -1287,7 +1288,7 @@ void main() {
       await _signIn(tester);
 
       final flip = tester.widget<IconButton>(
-        find.widgetWithIcon(IconButton, Icons.cameraswitch_outlined),
+        find.widgetWithIcon(IconButton, Symbols.cameraswitch_rounded),
       );
       expect(flip.onPressed, isNull);
     });

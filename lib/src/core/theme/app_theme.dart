@@ -114,6 +114,8 @@ final tachLightTheme = ThemeData(
 final tachNightTheme = ThemeData(
   brightness: Brightness.dark,
   fontFamily: _family,
+  // Chỉ có tác dụng với bộ icon Symbols; nét đậm cho dễ thấy trên nền ảnh.
+  iconTheme: const IconThemeData(weight: 700),
   colorScheme:
       ColorScheme.fromSeed(
         seedColor: TachColors.mint,

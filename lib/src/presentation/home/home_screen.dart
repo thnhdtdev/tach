@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -447,8 +448,12 @@ class _FeedBar extends StatelessWidget {
             IconButton(
               onPressed: onMonth,
               tooltip: 'Cả tháng',
-              iconSize: 28,
-              icon: const Icon(Icons.grid_view_rounded, color: Colors.white),
+              iconSize: 32,
+              icon: const Icon(
+                Symbols.grid_view_rounded,
+                fill: 1,
+                color: Colors.white,
+              ),
             ),
             Semantics(
               button: true,
@@ -475,9 +480,9 @@ class _FeedBar extends StatelessWidget {
             IconButton(
               onPressed: onBalance,
               tooltip: 'Số dư',
-              iconSize: 28,
+              iconSize: 32,
               icon: const Icon(
-                Icons.account_balance_wallet_outlined,
+                Symbols.account_balance_wallet_rounded,
                 color: Colors.white,
               ),
             ),

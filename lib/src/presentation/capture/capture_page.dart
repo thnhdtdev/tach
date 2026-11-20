@@ -5,6 +5,7 @@ import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoIcons;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/format/money.dart';
@@ -543,8 +544,8 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                                 style: text.bodySmall,
                               ),
                               Icon(
-                                Icons.keyboard_arrow_down,
-                                size: 20,
+                                Symbols.keyboard_arrow_down_rounded,
+                                size: 22,
                                 color: Colors.white.withValues(alpha: 0.62),
                               ),
                             ],
@@ -683,7 +684,7 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
               foregroundColor: Colors.white.withValues(alpha: 0.85),
               minimumSize: const Size(64, 44),
             ),
-            icon: const Icon(Icons.edit_note, size: 20),
+            icon: const Icon(Symbols.edit_note_rounded, size: 24),
             label: const Text('Ghi không cần ảnh'),
           ),
           const SizedBox(height: 10),
@@ -693,9 +694,11 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
               IconButton(
                 onPressed: _toggleFlash,
                 tooltip: _flashOn ? 'Tắt đèn flash' : 'Bật đèn flash',
-                iconSize: 26,
+                iconSize: 32,
                 icon: Icon(
-                  _flashOn ? Icons.flash_on : Icons.flash_off,
+                  _flashOn
+                      ? Symbols.flash_on_rounded
+                      : Symbols.flash_off_rounded,
                   color: Colors.white,
                 ),
               ),
@@ -705,10 +708,10 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                 tooltip: _camera.isFront
                     ? 'Đổi sang camera sau'
                     : 'Đổi sang camera trước',
-                iconSize: 26,
+                iconSize: 32,
                 color: Colors.white,
                 disabledColor: Colors.white.withValues(alpha: 0.35),
-                icon: const Icon(Icons.cameraswitch_outlined),
+                icon: const Icon(Symbols.cameraswitch_rounded),
               ),
             ],
           ),
@@ -733,8 +736,8 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                   else
                     Text('Chưa có khoản chi nào', style: text.bodySmall),
                   Icon(
-                    Icons.keyboard_arrow_down,
-                    size: 22,
+                    Symbols.keyboard_arrow_down_rounded,
+                    size: 24,
                     color: Colors.white.withValues(alpha: 0.62),
                   ),
                 ],
@@ -783,12 +786,12 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
             leading: IconButton(
               onPressed: _cancel,
               tooltip: 'Hủy',
-              iconSize: 28,
-              icon: const Icon(Icons.close, color: Colors.white),
+              iconSize: 34,
+              icon: const Icon(Symbols.close_rounded, color: Colors.white),
             ),
             action: _RoundAction(
               label: 'Tiếp',
-              icon: Icons.arrow_forward_rounded,
+              icon: Symbols.arrow_forward_rounded,
               size: 56,
               onPressed: _amount == 0
                   ? null
@@ -802,8 +805,11 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                 : IconButton(
                     onPressed: _noteFocus.requestFocus,
                     tooltip: 'Thêm ghi chú',
-                    iconSize: 26,
-                    icon: const Icon(Icons.text_fields, color: Colors.white),
+                    iconSize: 32,
+                    icon: const Icon(
+                      Symbols.text_fields_rounded,
+                      color: Colors.white,
+                    ),
                   ),
           ),
         ],
@@ -852,12 +858,13 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
             leading: IconButton(
               onPressed: () => _setStage(_Stage.amount),
               tooltip: 'Sửa số tiền',
-              iconSize: 28,
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              iconSize: 34,
+              icon: const Icon(Symbols.arrow_back_rounded, color: Colors.white),
             ),
             action: _RoundAction(
               label: 'Gửi',
               icon: CupertinoIcons.paperplane,
+              thicken: true,
               onPressed: count == 0 ? null : () => _send(cubit),
             ),
           ),
@@ -896,6 +903,7 @@ class _RoundAction extends StatelessWidget {
     required this.icon,
     required this.onPressed,
     this.size = 78,
+    this.thicken = false,
   });
 
   final String label;
@@ -903,9 +911,14 @@ class _RoundAction extends StatelessWidget {
   final VoidCallback? onPressed;
   final double size;
 
+  /// Bộ icon iOS không chỉnh được độ đậm; chồng thêm bốn bản lệch nhau một
+  /// chút để nét dày ngang với các icon còn lại.
+  final bool thicken;
+
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
+    final color = Colors.white.withValues(alpha: enabled ? 1 : 0.4);
     return Semantics(
       button: true,
       enabled: enabled,
@@ -920,10 +933,18 @@ class _RoundAction extends StatelessWidget {
             dimension: size,
             child: Icon(
               icon,
-              size: size * 0.44,
-              color: enabled
-                  ? TachColors.onMint
-                  : Colors.white.withValues(alpha: 0.4),
+              size: size * 0.5,
+              color: color,
+              shadows: [
+                if (thicken)
+                  for (final offset in const [
+                    Offset(0.7, 0),
+                    Offset(-0.7, 0),
+                    Offset(0, 0.7),
+                    Offset(0, -0.7),
+                  ])
+                    Shadow(color: color, offset: offset),
+              ],
             ),
           ),
         ),

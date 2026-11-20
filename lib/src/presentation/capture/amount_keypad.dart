@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 class AmountKeypad extends StatelessWidget {
@@ -61,8 +62,8 @@ class _Key extends StatelessWidget {
             child: Center(
               child: isBackspace
                   ? const Icon(
-                      Icons.backspace_outlined,
-                      size: 22,
+                      Symbols.backspace_rounded,
+                      size: 28,
                       color: Colors.white,
                     )
                   : Text(

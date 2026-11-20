@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/format/money.dart';
@@ -289,8 +290,9 @@ class ExpensePage extends StatelessWidget {
                   IconButton(
                     onPressed: () => _openActions(context),
                     tooltip: 'Tùy chọn',
+                    iconSize: 30,
                     icon: Icon(
-                      Icons.more_horiz,
+                      Symbols.more_horiz_rounded,
                       color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
@@ -486,8 +488,8 @@ class ExpensePage extends StatelessWidget {
                                 ),
                               )
                             : const Icon(
-                                Icons.add_reaction_outlined,
-                                size: 24,
+                                Symbols.add_reaction_rounded,
+                                size: 28,
                                 color: Colors.white,
                               ),
                       ),

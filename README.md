@@ -33,6 +33,60 @@ supabase/   Migration và cấu hình Supabase
 docs/       Tài liệu sản phẩm và thương hiệu
 ```
 
+Bên trong `lib/`:
+
+```
+lib/
+├── main.dart          Điểm khởi chạy
+└── src/
+    ├── app.dart       Widget gốc (MaterialApp)
+    ├── core/          Theme, hằng số, kiểu tiền VND, helper
+    ├── datasource/    Truy cập dữ liệu Supabase (auth, nhóm, khoản chi, ảnh)
+    ├── dependency/    Đăng ký dependency injection
+    ├── domain/        Entity, interface repository, logic chia tiền
+    ├── presentation/  Màn hình theo tính năng và state
+    ├── routes/        Điều hướng
+    └── services/      Widget màn hình chính, VietQR, camera
+```
+
+## Trạng thái hiện tại
+
+Giao diện MVP đã dựng xong. App chạy theo hai cách:
+
+- **Nối Supabase** (`--dart-define-from-file=.env`, xem
+  [supabase/README.md](supabase/README.md)): đăng nhập bằng tài khoản khách,
+  dữ liệu nhóm, khoản chi, bình luận, cảm xúc, trả nợ và ảnh lưu trên máy chủ
+  (`lib/src/datasource/supabase/`). Ảnh chụp được cắt vuông và nén trước khi
+  tải lên. Người ghi sửa hoặc xóa được khoản chi của mình. Khi người khác
+  trong nhóm thay đổi gì, app đang mở tự tải lại (Supabase Realtime).
+- **Dữ liệu mẫu** (không truyền gì): mọi thứ chỉ sống trong bộ nhớ
+  (`lib/src/datasource/sample/`), dùng cho test và để xem giao diện.
+
+Widget màn hình chính có trên iOS (`ios/TachWidget/`): cỡ nhỏ hiện khoản chi
+mới nhất kèm ảnh, cỡ vừa hiện số tiền bạn cần trả hoặc được nhận trong nhóm
+đang mở. App ghi dữ liệu cho widget qua App Group `group.vn.tachapp.tach` mỗi
+khi sổ thay đổi, nên widget chỉ mới lại khi app được mở; muốn widget tự đổi
+lúc app đóng thì cần thông báo đẩy.
+
+Chưa có: đăng nhập Apple, Google, số điện thoại; thông báo đẩy; widget trên
+Android. Trên máy không có camera (trình giả lập), bản debug cho chụp ảnh
+mẫu.
+
+Font chữ là Montserrat, giấy phép SIL Open Font License
+(`assets/fonts/OFL.txt`).
+
+Ảnh minh họa ở màn giới thiệu nằm trong `assets/images/onboarding/`, đã cắt
+vuông. Hai ảnh món ăn thuộc phạm vi công cộng, giấy phép
+[CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/):
+
+- `eggs.jpg`: [rawpixel](https://www.rawpixel.com/image/5920771/photo-image-background-public-domain-food)
+- `hotpot.jpg`: "Hot pot" của clvs7 trên
+  [Flickr](https://www.flickr.com/photos/182866455@N04/54448305782)
+
+Bốn ảnh chân dung `mia.jpg`, `ben.jpg`, `ruby.jpg`, `leo.jpg` (256 điểm ảnh) là
+avatar minh họa ở màn "Tự tách, tự tính". Nguồn và giấy phép của bốn ảnh này
+chưa được ghi lại; cần xác nhận quyền sử dụng trước khi phát hành app.
+
 ## Chạy app
 
 ```bash

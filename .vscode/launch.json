@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Tach (dữ liệu mẫu)",
+      "request": "launch",
+      "type": "dart"
+    },
+    {
+      "name": "Tach (Supabase)",
+      "request": "launch",
+      "type": "dart",
+      "toolArgs": ["--dart-define-from-file=.env"]
+    }
+  ]
+}

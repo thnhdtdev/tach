@@ -7,7 +7,7 @@
 | Tên app | Tach (đọc là "tách") |
 | Ý nghĩa | Tiếng màn trập "tách tách" + "tách bill" (chia tiền) |
 | Slogan | Chụp là ghi, tách là xong. |
-| Màu chính | Cam đất `#D85A30` |
+| Màu chính | Xanh bạc hà `#12A594` |
 | Logo | Chưa chốt |
 
 ## Nhóm người dùng

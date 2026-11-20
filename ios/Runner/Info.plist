@@ -66,5 +66,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Tach dùng camera để chụp ảnh khoản chi và ảnh đại diện.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Tach lưu ảnh khoản chi vào thư viện ảnh khi bạn chọn lưu ảnh.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Tach cần truy cập thư viện ảnh để bạn chọn ảnh đại diện.</string>
 </dict>
 </plist>

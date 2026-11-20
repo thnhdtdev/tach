@@ -1,0 +1,448 @@
+import 'dart:math' as math;
+
+import 'package:material_ui/material_ui.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+
+import '../../core/theme/app_colors.dart';
+import '../widgets/tach_mark.dart';
+
+class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key, required this.onDone});
+
+  final VoidCallback onDone;
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  static const _pages = [
+    (
+      title: 'Chụp là ghi',
+      body:
+          'Mua gì cho cả phòng, chụp một tấm rồi gõ số tiền. '
+          'Xong trong 5 giây.',
+    ),
+    (
+      title: 'Tự tách, tự tính',
+      body:
+          'Tach chia đều cho cả nhóm và cộng dồn ai nợ ai. '
+          'Không cần sổ, không cần bảng tính.',
+    ),
+    (
+      title: 'Trả bằng VietQR',
+      body:
+          'Cuối tháng quét một mã là chuyển đúng số tiền, đúng người. '
+          'Tach không giữ tiền của bạn.',
+    ),
+  ];
+
+  final _controller = PageController();
+  var _index = 0;
+
+  bool get _isLast => _index == _pages.length - 1;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _next() {
+    if (_isLast) {
+      widget.onDone();
+      return;
+    }
+    _controller.nextPage(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(28, 4, 12, 0),
+              child: Row(
+                children: [
+                  const TachLogo(),
+                  const Spacer(),
+                  Visibility(
+                    visible: !_isLast,
+                    maintainSize: true,
+                    maintainAnimation: true,
+                    maintainState: true,
+                    child: TextButton(
+                      onPressed: widget.onDone,
+                      style: TextButton.styleFrom(
+                        foregroundColor: TachColors.soft,
+                      ),
+                      child: const Text('Bỏ qua'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: PageView.builder(
+                controller: _controller,
+                itemCount: _pages.length,
+                onPageChanged: (i) => setState(() => _index = i),
+                itemBuilder: (context, i) {
+                  final page = _pages[i];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 28),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Center(
+                            child: ExcludeSemantics(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 24,
+                                  ),
+                                  child: switch (i) {
+                                    0 => const _CaptureArt(),
+                                    1 => const _SplitArt(),
+                                    _ => const _PayArt(),
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Text(page.title, style: text.headlineMedium),
+                        const SizedBox(height: 10),
+                        Text(
+                          page.body,
+                          style: text.bodyLarge?.copyWith(
+                            color: TachColors.soft,
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(28, 0, 24, 20),
+              child: Row(
+                children: [
+                  Semantics(
+                    label: 'Trang ${_index + 1} trên ${_pages.length}',
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < _pages.length; i++)
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.only(right: 6),
+                            width: i == _index ? 22 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: i == _index
+                                  ? TachColors.mint
+                                  : TachColors.hairline,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  FilledButton(
+                    onPressed: _next,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(_isLast ? 'Bắt đầu' : 'Tiếp theo'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoTile extends StatelessWidget {
+  const _PhotoTile({
+    required this.size,
+    required this.face,
+    required this.strong,
+    required this.child,
+    this.label,
+  });
+
+  final double size;
+
+  /// Tên file ảnh chân dung của người ghi trong `assets/images/onboarding/`.
+  final String face;
+
+  final String? label;
+
+  final String strong;
+
+  final Widget child;
+
+  /// Thẻ phía sau nghiêng 7 độ, như hai tấm ảnh chồng lên nhau.
+  static const _backTilt = -7 * math.pi / 180;
+  static final _backColor = Color.alphaBlend(
+    TachColors.mint.withValues(alpha: 0.5),
+    TachColors.night,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(size * 0.2);
+    final inset = size * 0.065;
+    const caption = TextStyle(
+      fontSize: 14,
+      color: Colors.white,
+      height: 1.2,
+      fontWeight: FontWeight.w500,
+    );
+
+    return SizedBox.square(
+      dimension: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: Transform.rotate(
+              angle: _backTilt,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: _backColor,
+                  borderRadius: radius,
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: ClipRRect(borderRadius: radius, child: child),
+          ),
+          Positioned(
+            left: inset,
+            right: inset,
+            bottom: inset,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: _Face(face, size: 34),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 9,
+                    ),
+                    decoration: const ShapeDecoration(
+                      color: Color(0xD91B2422),
+                      shape: StadiumBorder(),
+                    ),
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          if (label != null) TextSpan(text: '$label '),
+                          TextSpan(
+                            text: strong,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: caption,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Photo extends StatelessWidget {
+  const _Photo(this.name);
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/images/onboarding/$name.jpg',
+      fit: BoxFit.cover,
+      // Ô lớn nhất rộng 264 điểm; giải mã vừa đủ cho màn hình 3x.
+      cacheWidth: 680,
+      errorBuilder: (_, _, _) => const ColoredBox(color: TachColors.mintTint),
+    );
+  }
+}
+
+class _Face extends StatelessWidget {
+  const _Face(this.name, {required this.size});
+
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipOval(
+      child: Image.asset(
+        'assets/images/onboarding/$name.jpg',
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        // Ảnh gốc 256 điểm ảnh, đủ nét cho ô lớn nhất ở màn 3x.
+        cacheWidth: 256,
+        errorBuilder: (_, _, _) => SizedBox.square(
+          dimension: size,
+          child: const ColoredBox(color: TachColors.mintTint),
+        ),
+      ),
+    );
+  }
+}
+
+class _CaptureArt extends StatelessWidget {
+  const _CaptureArt();
+
+  @override
+  Widget build(BuildContext context) {
+    return _PhotoTile(
+      size: 264,
+      face: 'ben',
+      label: 'Trứng',
+      strong: '30.000đ',
+      child: const _Photo('eggs'),
+    );
+  }
+}
+
+class _SplitArt extends StatelessWidget {
+  const _SplitArt();
+
+  @override
+  Widget build(BuildContext context) {
+    const faces = ['mia', 'ben', 'ruby', 'leo'];
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _PhotoTile(
+          size: 184,
+          face: 'mia',
+          strong: '320.000đ',
+          child: const _Photo('hotpot'),
+        ),
+        const SizedBox(height: 30),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final face in faces)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 9),
+                child: Column(
+                  children: [
+                    _Face(face, size: 52),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '80.000đ',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: TachColors.mintLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _PayArt extends StatelessWidget {
+  const _PayArt();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _PhotoTile(
+          size: 264,
+          face: 'mia',
+          label: 'Trả Mia',
+          strong: '266.000đ',
+          child: ColoredBox(
+            // Màu đặc, để thẻ nghiêng phía sau không lộ qua.
+            color: Color.alphaBlend(TachColors.mintTint, TachColors.night),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Container(
+                margin: const EdgeInsets.only(top: 22),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: QrImageView(
+                  data: 'Tach - Chụp là ghi, tách là xong.',
+                  size: 140,
+                  padding: EdgeInsets.zero,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: TachColors.ink,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: TachColors.ink,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 32),
+        const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.done_all, size: 20, color: TachColors.paid),
+            SizedBox(width: 6),
+            Text(
+              'Đã trả',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: TachColors.paid,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}

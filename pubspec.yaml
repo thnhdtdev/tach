@@ -35,6 +35,20 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  supabase_flutter: ^2.18.3
+  flutter_bloc: ^9.1.1
+  get_it: ^9.3.0
+  shared_preferences: ^2.5.6
+  camera: ^0.12.2
+  home_widget: ^0.10.0
+  qr_flutter: ^4.1.0
+  intl: ^0.20.3
+  image_picker: ^1.2.4
+  emoji_picker_flutter: ^4.5.4
+  image: ^4.13.1
+  share_plus: ^13.3.1
+  cupertino_ui: ^1.1.7
+  material_symbols_icons: ^4.2960.0
 
 dev_dependencies:
   flutter_test:
@@ -46,6 +60,23 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  bloc_test: ^10.0.0
+  mocktail: ^1.0.5
+  flutter_launcher_icons: ^0.14.4
+
+# Sinh lại icon app: dart run flutter_launcher_icons
+# Công cụ ghi sai một dòng ASSETCATALOG trong project Xcode; chạy xong thì
+# git checkout ios/Runner.xcodeproj/project.pbxproj.
+flutter_launcher_icons:
+  image_path: assets/images/icon/tach-app-icon-1024.png
+  ios: true
+  remove_alpha_ios: true
+  android: true
+  adaptive_icon_background: "#12A594"
+  adaptive_icon_foreground: assets/images/icon/tach-android-foreground-1024.png
+  adaptive_icon_monochrome: assets/images/icon/tach-android-foreground-1024.png
+  # Ảnh lớp trước đã chừa sẵn vùng an toàn, không thu nhỏ thêm.
+  adaptive_icon_foreground_inset: 0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -57,6 +88,22 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Ảnh minh họa màn giới thiệu, giấy phép CC0 (nguồn ghi trong README).
+  assets:
+    - assets/images/onboarding/
+
+  # Montserrat (SIL Open Font License, xem assets/fonts/OFL.txt).
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-Regular.ttf
+        - asset: assets/fonts/Montserrat-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Montserrat-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700
 
   # To add assets to your application, add an assets section, like this:
   # assets:

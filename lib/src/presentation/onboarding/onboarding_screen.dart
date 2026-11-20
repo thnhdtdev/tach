@@ -1,8 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../widgets/member_avatar.dart';
 import '../widgets/tach_mark.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -178,27 +179,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 class _PhotoTile extends StatelessWidget {
   const _PhotoTile({
     required this.size,
-    required this.owner,
-    required this.tone,
+    required this.face,
     required this.strong,
     required this.child,
     this.label,
-    this.face,
   });
 
   final double size;
 
-  final String owner;
-  final Color tone;
-
-  /// Tên file ảnh chân dung của người ghi; không có thì hiện chữ cái đầu.
-  final String? face;
+  /// Tên file ảnh chân dung của người ghi trong `assets/images/onboarding/`.
+  final String face;
 
   final String? label;
 
   final String strong;
 
   final Widget child;
+
+  /// Thẻ phía sau nghiêng 7 độ, như hai tấm ảnh chồng lên nhau.
+  static const _backTilt = -7 * math.pi / 180;
+  static final _backColor = Color.alphaBlend(
+    TachColors.mint.withValues(alpha: 0.5),
+    TachColors.night,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -214,21 +217,21 @@ class _PhotoTile extends StatelessWidget {
     return SizedBox.square(
       dimension: size,
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x260B5F55),
-                    blurRadius: 30,
-                    offset: Offset(0, 16),
-                  ),
-                ],
+            child: Transform.rotate(
+              angle: _backTilt,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: _backColor,
+                  borderRadius: radius,
+                ),
               ),
-              child: ClipRRect(borderRadius: radius, child: child),
             ),
+          ),
+          Positioned.fill(
+            child: ClipRRect(borderRadius: radius, child: child),
           ),
           Positioned(
             left: inset,
@@ -242,9 +245,7 @@ class _PhotoTile extends StatelessWidget {
                     color: Colors.white,
                     shape: BoxShape.circle,
                   ),
-                  child: face == null
-                      ? MemberAvatar(name: owner, tone: tone, size: 34)
-                      : _Face(face!, size: 34),
+                  child: _Face(face, size: 34),
                 ),
                 const SizedBox(width: 6),
                 Flexible(
@@ -331,8 +332,7 @@ class _CaptureArt extends StatelessWidget {
   Widget build(BuildContext context) {
     return _PhotoTile(
       size: 264,
-      owner: 'Minh',
-      tone: TachColors.avatarTones[1],
+      face: 'ben',
       label: 'Trứng',
       strong: '30.000đ',
       child: const _Photo('eggs'),
@@ -351,9 +351,7 @@ class _SplitArt extends StatelessWidget {
       children: [
         _PhotoTile(
           size: 184,
-          owner: 'Lan',
-          tone: TachColors.avatarTones[2],
-          face: 'ruby',
+          face: 'mia',
           strong: '320.000đ',
           child: const _Photo('hotpot'),
         ),
@@ -396,12 +394,12 @@ class _PayArt extends StatelessWidget {
       children: [
         _PhotoTile(
           size: 264,
-          owner: 'Lan',
-          tone: TachColors.avatarTones[2],
-          label: 'Trả Lan',
+          face: 'mia',
+          label: 'Trả Mia',
           strong: '266.000đ',
           child: ColoredBox(
-            color: TachColors.mintTint,
+            // Màu đặc, để thẻ nghiêng phía sau không lộ qua.
+            color: Color.alphaBlend(TachColors.mintTint, TachColors.night),
             child: Align(
               alignment: Alignment.topCenter,
               child: Container(

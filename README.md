@@ -75,13 +75,17 @@ mẫu.
 Font chữ là Montserrat, giấy phép SIL Open Font License
 (`assets/fonts/OFL.txt`).
 
-Ảnh minh họa ở màn giới thiệu (`assets/images/onboarding/`) thuộc phạm vi công
-cộng, giấy phép [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/),
-đã cắt vuông:
+Ảnh minh họa ở màn giới thiệu nằm trong `assets/images/onboarding/`, đã cắt
+vuông. Hai ảnh món ăn thuộc phạm vi công cộng, giấy phép
+[CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/):
 
 - `eggs.jpg`: [rawpixel](https://www.rawpixel.com/image/5920771/photo-image-background-public-domain-food)
 - `hotpot.jpg`: "Hot pot" của clvs7 trên
   [Flickr](https://www.flickr.com/photos/182866455@N04/54448305782)
+
+Bốn ảnh chân dung `mia.jpg`, `ben.jpg`, `ruby.jpg`, `leo.jpg` (256 điểm ảnh) là
+avatar minh họa ở màn "Tự tách, tự tính". Nguồn và giấy phép của bốn ảnh này
+chưa được ghi lại; cần xác nhận quyền sử dụng trước khi phát hành app.
 
 ## Chạy app
 

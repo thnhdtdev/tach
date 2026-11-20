@@ -183,12 +183,16 @@ class _PhotoTile extends StatelessWidget {
     required this.strong,
     required this.child,
     this.label,
+    this.face,
   });
 
   final double size;
 
   final String owner;
   final Color tone;
+
+  /// Tên file ảnh chân dung của người ghi; không có thì hiện chữ cái đầu.
+  final String? face;
 
   final String? label;
 
@@ -238,7 +242,9 @@ class _PhotoTile extends StatelessWidget {
                     color: Colors.white,
                     shape: BoxShape.circle,
                   ),
-                  child: MemberAvatar(name: owner, tone: tone, size: 34),
+                  child: face == null
+                      ? MemberAvatar(name: owner, tone: tone, size: 34)
+                      : _Face(face!, size: 34),
                 ),
                 const SizedBox(width: 6),
                 Flexible(
@@ -293,6 +299,31 @@ class _Photo extends StatelessWidget {
   }
 }
 
+class _Face extends StatelessWidget {
+  const _Face(this.name, {required this.size});
+
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipOval(
+      child: Image.asset(
+        'assets/images/onboarding/$name.jpg',
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        // Ảnh gốc 256 điểm ảnh, đủ nét cho ô lớn nhất ở màn 3x.
+        cacheWidth: 256,
+        errorBuilder: (_, _, _) => SizedBox.square(
+          dimension: size,
+          child: const ColoredBox(color: TachColors.mintTint),
+        ),
+      ),
+    );
+  }
+}
+
 class _CaptureArt extends StatelessWidget {
   const _CaptureArt();
 
@@ -314,7 +345,7 @@ class _SplitArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const names = ['An', 'Minh', 'Lan', 'Hùng'];
+    const faces = ['mia', 'ben', 'ruby', 'leo'];
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -322,6 +353,7 @@ class _SplitArt extends StatelessWidget {
           size: 184,
           owner: 'Lan',
           tone: TachColors.avatarTones[2],
+          face: 'ruby',
           strong: '320.000đ',
           child: const _Photo('hotpot'),
         ),
@@ -329,16 +361,12 @@ class _SplitArt extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (var i = 0; i < names.length; i++)
+            for (final face in faces)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 9),
                 child: Column(
                   children: [
-                    MemberAvatar(
-                      name: names[i],
-                      tone: TachColors.avatarTones[i],
-                      size: 52,
-                    ),
+                    _Face(face, size: 52),
                     const SizedBox(height: 8),
                     const Text(
                       '80.000đ',

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../domain/entities/expense.dart';
 import '../balance/balance_screen.dart';
 import '../capture/capture_page.dart';
 import '../feed/expense_page.dart';
@@ -89,22 +91,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final index = state.expenses.indexWhere((e) => e.id == shown);
     final page = _pages.page?.round() ?? 0;
     if (index < 0) {
-      // Khoản đang xem vừa bị xóa: trang này giờ là khoản kế tiếp.
-      final next = page - 1;
-      _shownExpenseId = next >= 0 && next < state.expenses.length
-          ? state.expenses[next].id
-          : null;
+      // Khoản đang xem vừa bị xóa: trang này giờ là khoản kế tiếp, hoặc lùi về
+      // trang trước nếu nó là khoản cuối. PageView không báo onPageChanged khi
+      // bị đẩy lùi như vậy, nên phải tự cập nhật.
+      _showPage(math.min(page, state.expenses.length), state.expenses);
     } else if (index + 1 != page) {
       _pages.jumpToPage(index + 1);
     }
   }
 
-  void _onPageChanged(int page) {
-    final expenses = context.read<LedgerCubit>().state.expenses;
+  void _onPageChanged(int page) =>
+      _showPage(page, context.read<LedgerCubit>().state.expenses);
+
+  void _showPage(int page, List<Expense> expenses) {
     _shownExpenseId = page > 0 && page <= expenses.length
         ? expenses[page - 1].id
         : null;
-    setState(() => _onFeed = page > 0);
+    final onFeed = page > 0;
+    if (onFeed != _onFeed) setState(() => _onFeed = onFeed);
   }
 
   void _goToPage(int page) {

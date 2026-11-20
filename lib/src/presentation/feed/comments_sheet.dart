@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoIcons;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -209,7 +210,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                     onPressed: _input.text.trim().isEmpty ? null : _send,
                     tooltip: 'Gửi bình luận',
                     color: TachColors.mint,
-                    icon: const Icon(Icons.arrow_upward_rounded),
+                    icon: const Icon(CupertinoIcons.paperplane),
                   ),
                 ],
               ),

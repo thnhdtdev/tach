@@ -57,7 +57,7 @@ class _Key extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           onTap: onTap,
           child: SizedBox(
-            height: 52,
+            height: 46,
             child: Center(
               child: isBackspace
                   ? const Icon(

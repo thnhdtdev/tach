@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoIcons;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -477,10 +478,7 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
             alignment: Alignment.topCenter,
             child: switch (_stage) {
               _Stage.viewfinder => _viewfinderControls(state),
-              _Stage.amount =>
-                typingNote
-                    ? const SizedBox(width: double.infinity, height: 12)
-                    : _amountControls(),
+              _Stage.amount => _amountControls(typingNote: typingNote),
               _Stage.people => _peopleControls(cubit, state),
             },
           ),
@@ -578,53 +576,11 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
           ),
         );
       case _Stage.amount:
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: _cancel,
-                tooltip: 'Hủy',
-                icon: const Icon(Icons.close, color: Colors.white),
-              ),
-              const Spacer(),
-              FilledButton(
-                onPressed: _amount == 0
-                    ? null
-                    : () {
-                        _noteFocus.unfocus();
-                        _setStage(_Stage.people);
-                      },
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(84, 40),
-                  disabledBackgroundColor: Colors.white.withValues(alpha: 0.1),
-                  disabledForegroundColor: Colors.white.withValues(alpha: 0.4),
-                ),
-                child: const Text('Xong'),
-              ),
-              const SizedBox(width: 8),
-            ],
-          ),
-        );
       case _Stage.people:
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: () => _setStage(_Stage.amount),
-                tooltip: 'Sửa số tiền',
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-              ),
-              Expanded(
-                child: Text(
-                  'Chia cho ai?',
-                  textAlign: TextAlign.center,
-                  style: text.titleMedium,
-                ),
-              ),
-              const SizedBox(width: 48),
-            ],
+        return Center(
+          child: Text(
+            _stage == _Stage.amount ? 'Bao nhiêu tiền?' : 'Chia cho ai?',
+            style: text.titleMedium,
           ),
         );
     }
@@ -790,36 +746,66 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _amountControls() {
+  Widget _amountControls({required bool typingNote}) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              for (final quick in const ['15', '20', '50'])
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: OutlinedButton(
-                      onPressed: () => setState(() => _digits = quick),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 44),
-                        foregroundColor: TachColors.mintLight,
-                        side: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.22),
+          if (!typingNote) ...[
+            Row(
+              children: [
+                for (final quick in const ['15', '20', '50'])
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: OutlinedButton(
+                        onPressed: () => setState(() => _digits = quick),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 44),
+                          foregroundColor: TachColors.mintLight,
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.22),
+                          ),
+                          shape: const StadiumBorder(),
                         ),
-                        shape: const StadiumBorder(),
+                        child: Text('${quick}k'),
                       ),
-                      child: Text('${quick}k'),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            AmountKeypad(onKey: _onKey),
+            const SizedBox(height: 4),
+          ],
+          _ActionRow(
+            leading: IconButton(
+              onPressed: _cancel,
+              tooltip: 'Hủy',
+              iconSize: 28,
+              icon: const Icon(Icons.close, color: Colors.white),
+            ),
+            action: _RoundAction(
+              label: 'Tiếp',
+              icon: Icons.arrow_forward_rounded,
+              size: 56,
+              onPressed: _amount == 0
+                  ? null
+                  : () {
+                      _noteFocus.unfocus();
+                      _setStage(_Stage.people);
+                    },
+            ),
+            trailing: typingNote
+                ? null
+                : IconButton(
+                    onPressed: _noteFocus.requestFocus,
+                    tooltip: 'Thêm ghi chú',
+                    iconSize: 26,
+                    icon: const Icon(Icons.text_fields, color: Colors.white),
+                  ),
           ),
-          const SizedBox(height: 8),
-          AmountKeypad(onKey: _onKey),
         ],
       ),
     );
@@ -862,31 +848,85 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
             ],
           ),
           const SizedBox(height: 16),
-          Semantics(
-            button: true,
-            label: 'Gửi',
-            child: Material(
-              color: count == 0
-                  ? Colors.white.withValues(alpha: 0.1)
-                  : TachColors.mint,
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: count == 0 ? null : () => _send(cubit),
-                child: SizedBox.square(
-                  dimension: 78,
-                  child: Icon(
-                    Icons.arrow_upward_rounded,
-                    size: 34,
-                    color: count == 0
-                        ? Colors.white.withValues(alpha: 0.4)
-                        : TachColors.onMint,
-                  ),
-                ),
-              ),
+          _ActionRow(
+            leading: IconButton(
+              onPressed: () => _setStage(_Stage.amount),
+              tooltip: 'Sửa số tiền',
+              iconSize: 28,
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+            ),
+            action: _RoundAction(
+              label: 'Gửi',
+              icon: CupertinoIcons.paperplane,
+              onPressed: count == 0 ? null : () => _send(cubit),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({
+    required this.leading,
+    required this.action,
+    this.trailing,
+  });
+
+  final Widget leading;
+  final Widget action;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Center(child: leading)),
+        action,
+        Expanded(child: Center(child: trailing)),
+      ],
+    );
+  }
+}
+
+class _RoundAction extends StatelessWidget {
+  const _RoundAction({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    this.size = 78,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: label,
+      child: Material(
+        color: enabled ? TachColors.mint : Colors.white.withValues(alpha: 0.1),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: SizedBox.square(
+            dimension: size,
+            child: Icon(
+              icon,
+              size: size * 0.44,
+              color: enabled
+                  ? TachColors.onMint
+                  : Colors.white.withValues(alpha: 0.4),
+            ),
+          ),
+        ),
       ),
     );
   }

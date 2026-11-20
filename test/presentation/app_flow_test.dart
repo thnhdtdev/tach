@@ -227,13 +227,12 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('Chụp'));
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(FilledButton, 'Xong'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('Tiếp'));
+    await tester.pumpAndSettle();
     expect(
-      tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Xong'))
-          .onPressed,
-      isNull,
-      reason: 'Chưa có số tiền thì chưa bấm Xong được',
+      find.text('Bao nhiêu tiền?'),
+      findsOneWidget,
+      reason: 'Chưa có số tiền thì chưa sang bước chia được',
     );
 
     await tester.tap(find.byKey(const ValueKey('key-3')));
@@ -241,7 +240,7 @@ void main() {
     await tester.pump();
     expect(find.bySemanticsLabel('Số tiền 30.000đ'), findsOneWidget);
 
-    await tester.tap(find.text('Xong'));
+    await tester.tap(find.bySemanticsLabel('Tiếp'));
     await tester.pumpAndSettle();
     expect(find.text('Chia đều 4 người, mỗi người 7.500đ'), findsOneWidget);
 
@@ -622,6 +621,38 @@ void main() {
   );
 
   testWidgets(
+    'xóa khoản chi duy nhất của nhóm: về camera, thanh bảng tin ẩn đi',
+    (tester) async {
+      await _launch(tester);
+      await _signIn(tester);
+      final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+      cubit.createGroup(name: 'Đà Lạt', type: GroupType.trip);
+      cubit.addExpense(
+        amount: 50000,
+        note: 'Xăng',
+        participantIds: [cubit.state.meId],
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.textContaining('vừa ghi'));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Về camera').hitTestable(), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Tùy chọn'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Xóa khoản chi'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Xóa khoản chi'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Chưa có khoản chi nào'), findsOneWidget);
+      expect(find.bySemanticsLabel('Về camera').hitTestable(), findsNothing);
+      expect(find.byTooltip('Số dư').hitTestable(), findsNothing);
+      await tester.pump(const Duration(seconds: 4));
+    },
+  );
+
+  testWidgets(
     'đang xem một khoản mà có khoản mới chen lên đầu thì vẫn ở khoản đó',
     (tester) async {
       await _launch(tester);
@@ -975,7 +1006,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('key-5')));
       await tester.tap(find.byKey(const ValueKey('key-0')));
       await tester.pump();
-      await tester.tap(find.text('Xong'));
+      await tester.tap(find.bySemanticsLabel('Tiếp'));
       await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel('Gửi'));
       await tester.pump();
@@ -996,7 +1027,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('key-5')));
       await tester.pump();
-      await tester.tap(find.text('Xong'));
+      await tester.tap(find.bySemanticsLabel('Tiếp'));
       await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel('Gửi'));
       await tester.pump(const Duration(seconds: 3));
@@ -1057,11 +1088,11 @@ void main() {
 
         await tester.tap(find.bySemanticsLabel('Chụp'), warnIfMissed: false);
         await tester.pumpAndSettle();
-        expect(find.text('Xong'), findsNothing);
+        expect(find.bySemanticsLabel('Tiếp'), findsNothing);
 
         await tester.tap(find.text('Ghi không cần ảnh'));
         await tester.pumpAndSettle();
-        expect(find.text('Xong'), findsOneWidget);
+        expect(find.bySemanticsLabel('Tiếp'), findsOneWidget);
       },
     );
 
@@ -1101,7 +1132,7 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('key-2')));
       await tester.pump();
-      await tester.tap(find.text('Xong'));
+      await tester.tap(find.bySemanticsLabel('Tiếp'));
       await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel('Gửi'));
       await tester.pump();
@@ -1148,13 +1179,13 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Không chụp được ảnh. Thử lại nhé.'), findsOneWidget);
-      expect(find.text('Xong'), findsNothing);
+      expect(find.bySemanticsLabel('Tiếp'), findsNothing);
 
       _camera.photoFails = false;
       await tester.pump(const Duration(seconds: 3));
       await tester.tap(find.bySemanticsLabel('Chụp'));
       await tester.pumpAndSettle();
-      expect(find.text('Xong'), findsOneWidget);
+      expect(find.bySemanticsLabel('Tiếp'), findsOneWidget);
     });
 
     testWidgets('đèn flash: bật được thì đổi nút, máy không có thì báo', (

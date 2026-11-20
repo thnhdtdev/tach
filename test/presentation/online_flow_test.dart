@@ -24,6 +24,9 @@ class _GuestAuth implements AuthService {
   bool get isSignedIn => signedIn;
 
   @override
+  bool get isGuest => true;
+
+  @override
   Future<void> signIn(SignInMethod method) async {
     if (refuses) {
       throw const SignInException('Không kết nối được máy chủ.');

@@ -395,7 +395,8 @@ void main() {
 
     await tester.tap(find.byTooltip('Hồ sơ'));
     await tester.pumpAndSettle();
-    expect(find.text('Thành viên Trọ 12'), findsOneWidget);
+    expect(find.text('1 nhóm'), findsOneWidget);
+    expect(find.text('Bạn cần trả 266.000đ'), findsOneWidget);
     expect(find.text('MB Bank'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Đổi tên'));
@@ -404,11 +405,9 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Lưu tên'));
     await tester.pumpAndSettle();
-    expect(
-      find.text('Ánh'),
-      findsNWidgets(2),
-      reason: 'đầu trang và danh sách nhóm',
-    );
+    expect(find.text('Ánh'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('Sửa tài khoản'), 200);
 
     await tester.tap(find.text('Sửa tài khoản'));
     await tester.pumpAndSettle();
@@ -448,6 +447,9 @@ void main() {
 
     await tester.scrollUntilVisible(find.text('Đăng xuất'), 200);
     await tester.tap(find.text('Đăng xuất'));
+    await tester.pumpAndSettle();
+    expect(find.text('Đăng xuất khỏi Tach?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, 'Đăng xuất'));
     await tester.pumpAndSettle();
     expect(find.text('Tiếp tục với Apple'), findsOneWidget);
     expect(find.text('Hồ sơ'), findsNothing);
@@ -747,11 +749,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.drag(preview, const Offset(-40, 0));
     await tester.pumpAndSettle();
-    expect(find.text('Thành viên Trọ 12'), findsNothing);
+    expect(find.text('Nhóm của bạn'), findsNothing);
 
     await tester.drag(preview, const Offset(-200, 0));
     await tester.pumpAndSettle();
-    expect(find.text('Thành viên Trọ 12'), findsOneWidget);
+    expect(find.text('Nhóm của bạn'), findsOneWidget);
     expect(_camera.zooms, isEmpty);
 
     await tester.pageBack();
@@ -762,7 +764,7 @@ void main() {
 
     await tester.fling(find.text('30.000đ'), const Offset(-60, 0), 1500);
     await tester.pumpAndSettle();
-    expect(find.text('Thành viên Trọ 12'), findsOneWidget);
+    expect(find.text('Nhóm của bạn'), findsOneWidget);
   });
 
   testWidgets('đang gõ số tiền thì vuốt ngang không mở hồ sơ', (tester) async {
@@ -777,7 +779,7 @@ void main() {
       const Offset(-250, 0),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Thành viên Trọ 12'), findsNothing);
+    expect(find.text('Nhóm của bạn'), findsNothing);
     expect(find.byKey(const ValueKey('key-0')), findsOneWidget);
   });
 
@@ -787,6 +789,8 @@ void main() {
 
     await tester.tap(find.byTooltip('Hồ sơ'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Đang mở'));
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Mời bạn vào nhóm'), 200);
     await tester.tap(find.text('Mời bạn vào nhóm'));
     await tester.pumpAndSettle();
@@ -795,11 +799,63 @@ void main() {
     expect(find.text('K7M2QP'), findsOneWidget);
   });
 
+  testWidgets(
+    'hồ sơ: liệt kê các nhóm, chạm một nhóm thì mở nhóm đó để quản lý',
+    (tester) async {
+      await _launch(tester);
+      await _signIn(tester);
+      final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+      cubit.createGroup(name: 'Đà Lạt', type: GroupType.trip);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Hồ sơ'));
+      await tester.pumpAndSettle();
+      expect(find.text('2 nhóm'), findsOneWidget);
+      expect(find.text('Phòng trọ, 4 người'), findsOneWidget);
+      expect(find.text('Chuyến đi, 1 người'), findsOneWidget);
+      expect(find.text('Bạn cần trả 266.000đ'), findsOneWidget);
+      expect(find.text('Đang mở'), findsOneWidget);
+
+      await tester.tap(find.text('Trọ 12'));
+      await tester.pumpAndSettle();
+      expect(cubit.state.group.name, 'Trọ 12');
+      expect(find.text('Thành viên'), findsOneWidget);
+      expect(find.text('Cần trả 266.000đ'), findsOneWidget);
+      expect(find.text('Hùng'), findsOneWidget);
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Thêm nhóm'));
+      await tester.pumpAndSettle();
+      expect(find.text('Tạo nhóm mới'), findsOneWidget);
+      expect(find.text('Vào nhóm bằng mã mời'), findsOneWidget);
+    },
+  );
+
+  testWidgets('hồ sơ: đăng xuất hỏi lại, chọn ở lại thì không đăng xuất', (
+    tester,
+  ) async {
+    await _launch(tester);
+    await _signIn(tester);
+
+    await tester.tap(find.byTooltip('Hồ sơ'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Đăng xuất'), 200);
+    await tester.tap(find.text('Đăng xuất'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ở lại'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hồ sơ'), findsOneWidget);
+    expect(find.text('Tiếp tục với Apple'), findsNothing);
+  });
+
   testWidgets('hồ sơ: đổi tên nhóm, tên mới hiện ở màn camera', (tester) async {
     await _launch(tester);
     await _signIn(tester);
 
     await tester.tap(find.byTooltip('Hồ sơ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Đang mở'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.byTooltip('Đổi tên nhóm'), 200);
     await tester.tap(find.byTooltip('Đổi tên nhóm'));
@@ -814,6 +870,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Nhà trọ Cầu Giấy'), findsOneWidget);
     expect(find.text('Trọ 12'), findsNothing);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Nhà trọ Cầu Giấy'), findsOneWidget);
+    expect(find.bySemanticsLabel('Chụp'), findsOneWidget);
   });
 
   testWidgets('rời nhóm khi còn nợ: báo lý do và dẫn sang số dư', (
@@ -824,6 +885,8 @@ void main() {
     final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
 
     await tester.tap(find.byTooltip('Hồ sơ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Đang mở'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Rời nhóm'), 200);
     await tester.tap(find.text('Rời nhóm'));
@@ -852,6 +915,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Hồ sơ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Đang mở'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Rời nhóm'), 200);
     await tester.tap(find.text('Rời nhóm'));
@@ -921,6 +986,8 @@ void main() {
 
     await tester.tap(find.byTooltip('Hồ sơ'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Đang mở'));
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Xóa nhóm'), 200);
     await tester.ensureVisible(find.text('Xóa nhóm'));
     await tester.pumpAndSettle();
@@ -947,6 +1014,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byTooltip('Hồ sơ'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Đang mở'));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.text('Xóa nhóm'), 200);
       await tester.ensureVisible(find.text('Xóa nhóm'));

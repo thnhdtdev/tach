@@ -116,6 +116,20 @@ class LedgerState {
 
   int get myNet => net[meId] ?? 0;
 
+  /// Số dư của người dùng trong một nhóm bất kỳ, không riêng nhóm đang mở.
+  int myNetIn(String groupId) {
+    final ledger = ledgers.firstWhere(
+      (l) => l.group.id == groupId,
+      orElse: () => _noGroup,
+    );
+    final net = netBalances(
+      memberIds: ledger.group.members.map((m) => m.id),
+      expenses: ledger.expenses,
+      settlements: ledger.settlements,
+    );
+    return net[meId] ?? 0;
+  }
+
   bool get canLeaveGroup => hasGroup && myNet == 0;
 
   bool get isGroupCreator => hasGroup && group.createdBy == meId;

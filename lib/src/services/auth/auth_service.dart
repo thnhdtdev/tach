@@ -16,6 +16,9 @@ abstract interface class AuthService {
 
   bool get isSignedIn;
 
+  /// Tài khoản khách không có cách đăng nhập lại: đăng xuất là mất tài khoản.
+  bool get isGuest;
+
   /// Ném [SignInException] nếu không đăng nhập được.
   Future<void> signIn(SignInMethod method);
 
@@ -36,6 +39,9 @@ class DemoAuthService implements AuthService {
   bool get isSignedIn => _signedIn;
 
   @override
+  bool get isGuest => false;
+
+  @override
   Future<void> signIn(SignInMethod method) async => _signedIn = true;
 
   @override
@@ -52,6 +58,9 @@ class SupabaseAuthService implements AuthService {
 
   @override
   bool get isSignedIn => _client.auth.currentSession != null;
+
+  @override
+  bool get isGuest => _client.auth.currentUser?.isAnonymous ?? false;
 
   @override
   Future<void> signIn(SignInMethod method) async {

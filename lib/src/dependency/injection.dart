@@ -2,10 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/config/auth_config.dart';
 import '../datasource/sample/sample_group_repository.dart';
 import '../datasource/supabase/supabase_group_repository.dart';
 import '../domain/repositories/group_repository.dart';
 import '../services/auth/auth_service.dart';
+import '../services/auth/identity_provider.dart';
 import '../services/avatar/avatar_picker.dart';
 import '../services/camera/capture_camera.dart';
 import '../services/home_widget/home_widget_updater.dart';
@@ -37,7 +39,22 @@ void configureDependencies({SupabaseClient? supabase}) {
   }
 
   getIt
-    ..registerLazySingleton<AuthService>(() => SupabaseAuthService(supabase))
+    ..registerLazySingleton<AuthService>(
+      () => SupabaseAuthService(
+        supabase,
+        providers: [
+          // Đăng nhập gốc mới cấu hình cho iOS.
+          if (defaultTargetPlatform == TargetPlatform.iOS) ...[
+            if (AuthConfig.appleEnabled) AppleIdentity(),
+            if (AuthConfig.googleEnabled)
+              GoogleIdentity(
+                iosClientId: AuthConfig.googleIosClientId,
+                webClientId: AuthConfig.googleWebClientId,
+              ),
+          ],
+        ],
+      ),
+    )
     ..registerLazySingleton<PhotoLoader>(() => SupabasePhotoLoader(supabase))
     ..registerLazySingleton<GroupRepository>(
       () => SupabaseGroupRepository(supabase, getIt<PhotoLoader>()),

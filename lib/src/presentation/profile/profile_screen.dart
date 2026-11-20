@@ -20,6 +20,7 @@ import '../widgets/info_line.dart';
 import '../widgets/member_avatar.dart';
 import 'bank_account_sheet.dart';
 import 'home_widget_card.dart';
+import 'link_account_card.dart';
 import 'name_edit_sheet.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -240,6 +241,7 @@ class ProfileScreen extends StatelessWidget {
               ),
             ],
           ),
+          const LinkAccountCard(),
           if (groups.isNotEmpty) ...[
             const _Heading('Nhóm của bạn'),
             _Card(

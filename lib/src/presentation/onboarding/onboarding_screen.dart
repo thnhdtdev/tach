@@ -3,6 +3,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../widgets/member_avatar.dart';
+import '../widgets/tach_mark.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key, required this.onDone});
@@ -64,23 +65,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 12, top: 4),
-                child: Visibility(
-                  visible: !_isLast,
-                  maintainSize: true,
-                  maintainAnimation: true,
-                  maintainState: true,
-                  child: TextButton(
-                    onPressed: widget.onDone,
-                    style: TextButton.styleFrom(
-                      foregroundColor: TachColors.inkSoft,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(28, 4, 12, 0),
+              child: Row(
+                children: [
+                  const TachLogo(),
+                  const Spacer(),
+                  Visibility(
+                    visible: !_isLast,
+                    maintainSize: true,
+                    maintainAnimation: true,
+                    maintainState: true,
+                    child: TextButton(
+                      onPressed: widget.onDone,
+                      style: TextButton.styleFrom(
+                        foregroundColor: TachColors.inkSoft,
+                      ),
+                      child: const Text('Bỏ qua'),
                     ),
-                    child: const Text('Bỏ qua'),
                   ),
-                ),
+                ],
               ),
             ),
             Expanded(

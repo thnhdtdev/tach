@@ -60,6 +60,21 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   bloc_test: ^10.0.0
   mocktail: ^1.0.5
+  flutter_launcher_icons: ^0.14.4
+
+# Sinh lại icon app: dart run flutter_launcher_icons
+# Công cụ ghi sai một dòng ASSETCATALOG trong project Xcode; chạy xong thì
+# git checkout ios/Runner.xcodeproj/project.pbxproj.
+flutter_launcher_icons:
+  image_path: assets/images/icon/tach-app-icon-1024.png
+  ios: true
+  remove_alpha_ios: true
+  android: true
+  adaptive_icon_background: "#12A594"
+  adaptive_icon_foreground: assets/images/icon/tach-android-foreground-1024.png
+  adaptive_icon_monochrome: assets/images/icon/tach-android-foreground-1024.png
+  # Ảnh lớp trước đã chừa sẵn vùng an toàn, không thu nhỏ thêm.
+  adaptive_icon_foreground_inset: 0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

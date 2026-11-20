@@ -7,6 +7,7 @@ import '../../services/preferences/app_preferences.dart';
 import '../auth/login_screen.dart';
 import '../auth/name_setup_screen.dart';
 import '../home/home_screen.dart';
+import '../jar/budget_cubit.dart';
 import '../ledger/ledger_cubit.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../widgets/tach_mark.dart';
@@ -62,13 +63,16 @@ class _LaunchGateState extends State<LaunchGate> {
   void _enterHome() {
     setState(() => _step = _Step.home);
     context.read<LedgerCubit>().load();
+    context.read<BudgetCubit>().load();
   }
 
   Future<void> _signOut() async {
     final cubit = context.read<LedgerCubit>();
+    final budgets = context.read<BudgetCubit>();
     await _auth.signOut();
     if (!mounted) return;
     cubit.reset();
+    budgets.reset();
     setState(() => _step = _Step.login);
   }
 

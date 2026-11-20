@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../domain/entities/group.dart';
 import '../ledger/ledger_cubit.dart';
 import 'group_type_ui.dart';
 
@@ -13,6 +14,10 @@ class OpenGroup extends GroupsSheetResult {
   const OpenGroup(this.groupId);
 
   final String groupId;
+}
+
+class OpenPersonal extends GroupsSheetResult {
+  const OpenPersonal();
 }
 
 class CreateNewGroup extends GroupsSheetResult {
@@ -88,6 +93,39 @@ class GroupsSheet extends StatelessWidget {
                       onTap: () =>
                           Navigator.of(context).pop(OpenGroup(group.id)),
                     ),
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 2,
+                    ),
+                    leading: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: const BoxDecoration(
+                        color: TachColors.fill,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        GroupType.personal.icon,
+                        size: 22,
+                        color: Colors.white,
+                      ),
+                    ),
+                    title: Text('Riêng tôi', style: text.titleMedium),
+                    subtitle: Text(
+                      'Khoản chi của riêng bạn, không ai khác thấy',
+                      style: text.bodySmall,
+                    ),
+                    trailing: state.group.isPersonal
+                        ? const Icon(
+                            Icons.check_circle,
+                            color: TachColors.mint,
+                            semanticLabel: 'Đang mở',
+                          )
+                        : null,
+                    onTap: () =>
+                        Navigator.of(context).pop(const OpenPersonal()),
+                  ),
                 ],
               ),
             ),

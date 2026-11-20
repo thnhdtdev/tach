@@ -539,10 +539,11 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                '${state.group.members.length} người',
-                                style: text.bodySmall,
-                              ),
+                              if (!state.group.isPersonal)
+                                Text(
+                                  '${state.group.members.length} người',
+                                  style: text.bodySmall,
+                                ),
                               Icon(
                                 Symbols.keyboard_arrow_down_rounded,
                                 size: 22,
@@ -820,6 +821,7 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   Widget _peopleControls(LedgerCubit cubit, LedgerState state) {
     final text = Theme.of(context).textTheme;
     final members = state.group.members;
+    final personal = state.group.isPersonal;
     final count = members.length - _excluded.length;
     final share = count == 0 ? 0 : _amount ~/ count;
 
@@ -828,13 +830,6 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            count == 0
-                ? 'Chọn ít nhất một người'
-                : 'Chia đều $count người, mỗi người ${formatVnd(share)}',
-            style: text.bodyMedium,
-          ),
-          const SizedBox(height: 14),
           Wrap(
             alignment: WrapAlignment.center,
             spacing: 14,
@@ -847,13 +842,25 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                   tone: state.toneOf(m.id),
                   photo: m.avatarBytes,
                   selected: !_excluded.contains(m.id),
-                  onTap: () => setState(() {
-                    if (!_excluded.remove(m.id)) _excluded.add(m.id);
-                  }),
+                  // Khoản riêng luôn là của mình, không có ai để bỏ bớt.
+                  onTap: personal
+                      ? null
+                      : () => setState(() {
+                          if (!_excluded.remove(m.id)) _excluded.add(m.id);
+                        }),
                 ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
+          Text(
+            personal
+                ? 'Riêng tư, chỉ tính vào hũ của bạn'
+                : count == 0
+                ? 'Chọn ít nhất một người'
+                : 'Chia đều $count người, mỗi người ${formatVnd(share)}',
+            style: text.bodyMedium,
+          ),
+          const SizedBox(height: 14),
           _ActionRow(
             leading: IconButton(
               onPressed: () => _setStage(_Stage.amount),
@@ -1045,7 +1052,7 @@ class _PersonToggle extends StatelessWidget {
   final Color tone;
   final Uint8List? photo;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

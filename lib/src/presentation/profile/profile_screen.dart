@@ -219,7 +219,7 @@ class ProfileScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (state.hasGroup) ...[
+              if (state.inSharedGroup) ...[
                 _QuickAction(
                   icon: Icons.person_add_alt,
                   label: 'Mời bạn',

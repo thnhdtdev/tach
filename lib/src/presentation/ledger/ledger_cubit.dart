@@ -79,7 +79,18 @@ class LedgerState {
     orElse: () => _noGroup,
   );
 
-  List<Group> get groups => [for (final l in ledgers) l.group];
+  /// Các nhóm chung. Nhóm "Riêng tôi" không nằm ở đây.
+  List<Group> get groups => [
+    for (final l in ledgers)
+      if (!l.group.isPersonal) l.group,
+  ];
+
+  /// Nhóm "Riêng tôi", nếu người dùng đã từng ghi khoản riêng.
+  GroupLedger? get personal =>
+      ledgers.where((l) => l.group.isPersonal).firstOrNull;
+
+  /// Đang mở một nhóm chung (không phải "Riêng tôi").
+  bool get inSharedGroup => hasGroup && !group.isPersonal;
 
   bool get needsName => !isLoading && !loadFailed && me.name.trim().isEmpty;
 
@@ -279,7 +290,17 @@ class LedgerCubit extends Cubit<LedgerState> {
         ledgers: ledgers,
         currentGroupId: has(wanted)
             ? wanted
-            : (ledgers.isEmpty ? '' : ledgers.first.group.id),
+            : (ledgers.isEmpty
+                  ? ''
+                  // Mở app vào nhóm chung trước, "Riêng tôi" chỉ khi không còn
+                  // nhóm nào khác.
+                  : ledgers
+                        .firstWhere(
+                          (l) => !l.group.isPersonal,
+                          orElse: () => ledgers.first,
+                        )
+                        .group
+                        .id),
       ),
     );
   }
@@ -539,6 +560,16 @@ class LedgerCubit extends Cubit<LedgerState> {
     );
     _save(() => _repository.createGroup(group));
     return group;
+  }
+
+  /// Mở nhóm "Riêng tôi", tạo mới nếu chưa có.
+  void openPersonal() {
+    final personal = state.personal;
+    if (personal != null) {
+      switchGroup(personal.group.id);
+    } else {
+      createGroup(name: 'Riêng tôi', type: GroupType.personal);
+    }
   }
 
   void switchGroup(String groupId) {

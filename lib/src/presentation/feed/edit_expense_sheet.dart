@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/format/money.dart';
+import '../../core/format/vnd_input_formatter.dart';
 import '../../core/theme/app_colors.dart';
 import '../../domain/entities/expense.dart';
 import '../ledger/ledger_cubit.dart';
@@ -25,7 +26,7 @@ class _EditExpenseSheetState extends State<EditExpenseSheet> {
   late final _note = TextEditingController(text: widget.expense.note);
   late final _included = {...widget.expense.splits.keys};
 
-  int get _value => int.tryParse(_amount.text.replaceAll('.', '')) ?? 0;
+  int get _value => VndInputFormatter.valueOf(_amount.text);
 
   @override
   void dispose() {
@@ -97,7 +98,7 @@ class _EditExpenseSheetState extends State<EditExpenseSheet> {
             controller: _amount,
             autofocus: true,
             keyboardType: TextInputType.number,
-            inputFormatters: [_VndFormatter()],
+            inputFormatters: [VndInputFormatter()],
             style: text.headlineSmall,
             decoration: _field('Số tiền', suffix: 'đ'),
             onChanged: (_) => setState(() {}),
@@ -156,28 +157,6 @@ class _EditExpenseSheetState extends State<EditExpenseSheet> {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Hiện số tiền có dấu chấm ngăn hàng nghìn ngay khi gõ.
-class _VndFormatter extends TextInputFormatter {
-  // Giới hạn như lúc ghi khoản mới: dưới một tỷ đồng.
-  static const _maxDigits = 9;
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text
-        .replaceAll(RegExp(r'\D'), '')
-        .replaceFirst(RegExp('^0+'), '');
-    if (digits.length > _maxDigits) return oldValue;
-    final text = digits.isEmpty ? '' : formatThousands(int.parse(digits));
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }

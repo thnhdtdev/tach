@@ -52,11 +52,11 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              for (final type in GroupType.values)
+              for (final type in GroupType.shared)
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.only(
-                      right: type == GroupType.values.last ? 0 : 8,
+                      right: type == GroupType.shared.last ? 0 : 8,
                     ),
                     child: _TypeOption(
                       type: type,

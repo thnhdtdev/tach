@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tach/src/app.dart';
+import 'package:tach/src/core/format/money.dart';
 import 'package:tach/src/core/theme/app_colors.dart';
 import 'package:tach/src/dependency/injection.dart';
 import 'package:tach/src/domain/entities/group.dart';
@@ -179,6 +180,13 @@ List<Color> _background(WidgetTester tester) {
       .colors;
 }
 
+/// Dữ liệu mẫu tính lùi từ hôm nay, nên đầu tháng có khoản rơi vào tháng trước.
+Future<void> _showMonthOf(WidgetTester tester, DateTime time) async {
+  if (time.month == DateTime.now().month) return;
+  await tester.tap(find.byTooltip('Tháng trước'));
+  await tester.pumpAndSettle();
+}
+
 Future<void> _signIn(WidgetTester tester) async {
   await tester.tap(find.text('Tiếp tục với Google'));
   await tester.pumpAndSettle();
@@ -303,10 +311,19 @@ void main() {
     await tester.tap(find.textContaining('vừa ghi'));
     await tester.pumpAndSettle();
 
+    final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+    final rice = cubit.state.expenses.firstWhere((e) => e.note == 'Gạo 5kg');
+
     await tester.tap(find.byTooltip('Cả tháng'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Lưới'));
+    await tester.pumpAndSettle();
+    await _showMonthOf(tester, rice.createdAt);
+    final monthTotal = cubit.state.expenses
+        .where((e) => e.createdAt.month == rice.createdAt.month)
+        .fold(0, (sum, e) => sum + e.amount);
     expect(find.text('Cả nhóm đã chi'), findsOneWidget);
-    expect(find.text('1.634.000đ'), findsOneWidget);
+    expect(find.text(formatVnd(monthTotal)), findsOneWidget);
 
     await tester.tap(find.text('Của tôi'));
     await tester.pumpAndSettle();
@@ -318,6 +335,156 @@ void main() {
     expect(find.text('Bạn'), findsOneWidget);
     expect(find.text('Gạo 5kg'), findsOneWidget);
   });
+
+  testWidgets('riêng tôi: chụp ở đâu thì khoản vào đó, không hỏi lại nhóm', (
+    tester,
+  ) async {
+    await _launch(tester, cameraStatus: CameraStatus.unavailable);
+    await _signIn(tester);
+    final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+    final shared = cubit.state.expenses.length;
+
+    await tester.tap(find.byTooltip('Đổi nhóm'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Khoản chi của riêng bạn, không ai khác thấy'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Riêng tôi'));
+    await tester.pumpAndSettle();
+    expect(cubit.state.group.isPersonal, isTrue);
+    expect(find.text('Riêng tôi'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('Chụp'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('key-3')));
+    await tester.tap(find.byKey(const ValueKey('key-5')));
+    await tester.pump();
+    await tester.tap(find.bySemanticsLabel('Tiếp'));
+    await tester.pumpAndSettle();
+    expect(find.text('Riêng tư, chỉ tính vào hũ của bạn'), findsOneWidget);
+    expect(find.bySemanticsLabel('Minh'), findsNothing);
+    expect(find.text('Trọ 12'), findsNothing, reason: 'Không chọn lại nhóm');
+
+    await tester.tap(find.bySemanticsLabel('Gửi'));
+    await tester.pump();
+    expect(find.text('Đã gửi'), findsOneWidget);
+    expect(cubit.state.expenses.single.splits, {cubit.state.meId: 35000});
+    expect(cubit.state.groups.map((g) => g.name), ['Trọ 12']);
+    expect(cubit.state.ledgers.first.expenses, hasLength(shared));
+    await tester.pump(const Duration(seconds: 3));
+
+    await tester.tap(find.byTooltip('Đổi nhóm'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Trọ 12'));
+    await tester.pumpAndSettle();
+    expect(cubit.state.group.name, 'Trọ 12');
+
+    await tester.tap(find.bySemanticsLabel('Chụp'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('key-2')));
+    await tester.pump();
+    await tester.tap(find.bySemanticsLabel('Tiếp'));
+    await tester.pumpAndSettle();
+    expect(find.text('Chia đều 4 người, mỗi người 500đ'), findsOneWidget);
+    expect(find.text('Chỉ mình tôi'), findsNothing);
+  });
+
+  testWidgets('hũ của tôi: đặt hũ, xem chi tiết theo nhóm', (tester) async {
+    await _launch(tester);
+    await _signIn(tester);
+    final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+    cubit.addExpense(
+      amount: 600000,
+      note: 'Lẩu',
+      participantIds: cubit.state.group.members.map((m) => m.id).toList(),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('vừa ghi'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Cả tháng'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hũ của tôi'), findsOneWidget);
+    expect(find.text('Xem chi tiết'), findsNothing);
+
+    await tester.tap(find.text('Đặt hũ tháng'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Lưu'))
+          .onPressed,
+      isNull,
+    );
+    await tester.tap(find.text('5tr'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Lưu'));
+    await tester.pumpAndSettle();
+
+    // Trả cả bữa 600k nhưng hũ chỉ trừ phần của mình.
+    final month = DateTime.now().month;
+    final mine = cubit.state.expenses
+        .where((e) => e.createdAt.month == month)
+        .fold(0, (sum, e) => sum + (e.splits[cubit.state.meId] ?? 0));
+    expect(find.textContaining('/ 5.000.000đ'), findsOneWidget);
+    expect(
+      find.text('Còn ${formatVnd(5000000 - mine)}', findRichText: true),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Xem chi tiết'));
+    await tester.pumpAndSettle();
+    expect(find.text('Theo nhóm'), findsOneWidget);
+    expect(find.text('Trọ 12'), findsOneWidget);
+    expect(find.text(formatVnd(mine)), findsOneWidget);
+    expect(find.textContaining('không ai thấy hũ của bạn'), findsOneWidget);
+  });
+
+  testWidgets(
+    'lịch ảnh: chạm một ngày, chọn khoản thì mở khoản đó ở bảng tin',
+    (tester) async {
+      await _launch(tester);
+      await _signIn(tester);
+      final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+      final everyone = cubit.state.group.members.map((m) => m.id).toList();
+      cubit.createGroup(name: 'Đà Lạt', type: GroupType.trip);
+      cubit.addExpense(
+        amount: 90000,
+        note: 'Xăng',
+        participantIds: [cubit.state.meId],
+      );
+      cubit.switchGroup(cubit.state.groups.first.id);
+      cubit.addExpense(amount: 40000, note: 'Rau', participantIds: everyone);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.textContaining('vừa ghi'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Cả tháng'));
+      await tester.pumpAndSettle();
+
+      // Hôm nay có Rau (phần mình 10k) ở Trọ 12 và Xăng 90k ở Đà Lạt.
+      final today = find.bySemanticsLabel(
+        RegExp('^Ngày ${DateTime.now().day}, '),
+      );
+      expect(today, findsOneWidget);
+      await tester.tap(today);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Ngày ${DateTime.now().day} tháng ${DateTime.now().month}'),
+        findsOneWidget,
+      );
+      expect(find.text('Xăng'), findsOneWidget);
+      expect(find.text('Rau'), findsOneWidget);
+      expect(find.text('Trọ 12, cả khoản 40k'), findsOneWidget);
+
+      await tester.tap(find.text('Xăng'));
+      await tester.pumpAndSettle();
+      expect(cubit.state.group.name, 'Đà Lạt');
+      expect(find.text('90.000đ'), findsOneWidget);
+      expect(find.text('Xăng'), findsOneWidget);
+      expect(find.bySemanticsLabel('Về camera').hitTestable(), findsOneWidget);
+    },
+  );
 
   testWidgets('bình luận: trả lời theo luồng', (tester) async {
     await _launch(tester);

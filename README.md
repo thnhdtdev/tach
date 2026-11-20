@@ -70,6 +70,12 @@ mới nhất kèm ảnh, cỡ vừa hiện số tiền bạn cần trả hoặc 
 khi sổ thay đổi, nên widget chỉ mới lại khi app được mở; muốn widget tự đổi
 lúc app đóng thì cần thông báo đẩy.
 
+"Hũ của tôi" (mục 10.1 trong tài liệu sản phẩm): mỗi người đặt mức chi tiêu
+tháng cho riêng mình, hũ chỉ trừ phần của họ trong mọi nhóm. Khoản chi riêng
+ghi vào "Riêng tôi" (chọn ở ô đổi nhóm trên màn chụp), không ai khác thấy. Màn tháng có hai chế độ: "Lịch" là ảnh và phần tiền của mình theo từng
+ngày trên mọi nhóm, "Lưới" là các khoản của nhóm đang mở. Chưa có thông báo
+khi hũ chạm 80%; app chỉ nhắc ngay trên thẻ hũ.
+
 Chưa có: đăng nhập bằng số điện thoại; đăng nhập Apple và Google trên
 Android; thông báo đẩy; widget trên Android. Trên máy không có camera (trình giả lập), bản debug cho chụp ảnh
 mẫu.

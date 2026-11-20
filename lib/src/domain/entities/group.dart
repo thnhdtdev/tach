@@ -42,7 +42,18 @@ class Member {
       Member(id: id, name: name, bank: bank, avatarBytes: bytes);
 }
 
-enum GroupType { room, trip, family }
+enum GroupType {
+  room,
+  trip,
+  family,
+
+  /// Nhóm "Riêng tôi": chỉ có người dùng, chứa các khoản chi riêng. Không ai
+  /// khác thấy và không mời ai vào được.
+  personal;
+
+  /// Các loại để chọn khi tạo nhóm chung.
+  static const shared = [room, trip, family];
+}
 
 class Group {
   const Group({
@@ -72,6 +83,8 @@ class Group {
 
   /// Người đã rời nhóm, giữ lại để các khoản cũ còn hiện tên họ.
   final List<Member> formerMembers;
+
+  bool get isPersonal => type == GroupType.personal;
 
   /// Đổi tên không đổi [code], để nội dung chuyển khoản của nhóm giữ nguyên.
   Group copyWith({String? name, List<Member>? members}) => Group(

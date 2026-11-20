@@ -31,8 +31,13 @@ class _LaunchGateState extends State<LaunchGate> {
     _decide();
   }
 
+  /// Chạy với `--dart-define=SHOW_ONBOARDING=true` để xem lại màn giới thiệu mà
+  /// không phải xóa app (xóa app là mất tài khoản khách).
+  static const _alwaysShowOnboarding = bool.fromEnvironment('SHOW_ONBOARDING');
+
   Future<void> _decide() async {
-    final seen = await _preferences.hasSeenOnboarding();
+    final seen =
+        !_alwaysShowOnboarding && await _preferences.hasSeenOnboarding();
     if (!mounted) return;
     if (seen) {
       _afterOnboarding();

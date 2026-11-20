@@ -17,12 +17,12 @@ void main() {
 
   tearDown(() => cubit.close());
 
-  test('dữ liệu mẫu: bạn cần trả Mia 266.000đ sau khi gộp nợ', () {
+  test('dữ liệu mẫu: bạn cần trả Lan 266.000đ sau khi gộp nợ', () {
     final state = cubit.state;
     expect(state.myNet, -266000);
     expect(state.transfers, hasLength(3));
     final mine = state.transfers.singleWhere((t) => t.fromId == state.meId);
-    expect(state.member(mine.toId).name, 'Mia');
+    expect(state.member(mine.toId).name, 'Lan');
     expect(mine.amount, 266000);
   });
 

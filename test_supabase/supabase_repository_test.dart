@@ -14,6 +14,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tach/src/core/config/supabase_config.dart';
 import 'package:tach/src/core/ids/uuid.dart';
 import 'package:tach/src/datasource/supabase/supabase_group_repository.dart';
+import 'package:tach/src/domain/entities/budget.dart';
+import 'package:tach/src/datasource/supabase/supabase_budget_repository.dart';
 import 'package:tach/src/domain/entities/expense.dart';
 import 'package:tach/src/domain/entities/group.dart';
 import 'package:tach/src/domain/entities/settlement.dart';
@@ -376,6 +378,94 @@ void main() {
 
       await an.repository.deleteGroup(group.id);
       expect((await an.repository.load()).groups, isEmpty);
+    },
+  );
+  test(
+    'nhóm riêng và hũ: chỉ chủ nhân thấy',
+    skip: configured
+        ? false
+        : 'Chưa truyền SUPABASE_URL và SUPABASE_PUBLISHABLE_KEY',
+    () async {
+      final an = await _User.signUp('An');
+      final minh = await _User.signUp('Minh');
+      addTearDown(() async {
+        await an.client.dispose();
+        await minh.client.dispose();
+      });
+      final me = (await an.repository.load()).me;
+
+      String invite() =>
+          newUuid().replaceAll('-', '').substring(0, 6).toUpperCase();
+      Group personal(String id, String code) => Group(
+        id: id,
+        name: 'Riêng tôi',
+        code: 'RIENGTOI',
+        type: GroupType.personal,
+        inviteCode: code,
+        createdBy: an.id,
+        members: [me],
+      );
+
+      final code = invite();
+      final mine = personal(newUuid(), code);
+      await an.repository.createGroup(mine);
+      await expectLater(
+        an.repository.createGroup(personal(newUuid(), invite())),
+        throwsA(isA<PostgrestException>()),
+        reason: 'Mỗi người chỉ có một nhóm riêng',
+      );
+      expect(
+        await minh.repository.joinGroup(code),
+        isNull,
+        reason: 'Nhóm riêng không vào được bằng mã mời',
+      );
+
+      await an.repository.addExpense(
+        mine.id,
+        Expense(
+          id: newUuid(),
+          payerId: an.id,
+          amount: 35000,
+          note: 'Phở sáng',
+          splits: {an.id: 35000},
+          createdAt: DateTime.now(),
+        ),
+      );
+      final loaded = (await an.repository.load()).groups.single;
+      expect(loaded.group.type, GroupType.personal);
+      expect(loaded.expenses.single.note, 'Phở sáng');
+      expect((await minh.repository.load()).groups, isEmpty);
+
+      final anBudgets = SupabaseBudgetRepository(an.client);
+      final minhBudgets = SupabaseBudgetRepository(minh.client);
+      final month = DateTime(2026, 11);
+      await anBudgets.save(Budget(period: month, amount: 5000000));
+      await anBudgets.save(
+        Budget(period: month, amount: 7000000, includePersonal: false),
+      );
+      await anBudgets.save(
+        Budget(period: DateTime(2026, 12), amount: 6000000, repeats: false),
+      );
+
+      final saved = await anBudgets.load()
+        ..sort((a, b) => a.period.compareTo(b.period));
+      expect(saved.map((b) => (b.period, b.amount)), [
+        (month, 7000000),
+        (DateTime(2026, 12), 6000000),
+      ]);
+      expect(saved.first.includePersonal, isFalse);
+      expect(saved.last.repeats, isFalse);
+      expect(await minhBudgets.load(), isEmpty);
+
+      // Ghi hũ dưới tên người khác thì bị từ chối.
+      await expectLater(
+        minh.client.from('budgets').insert({
+          'user_id': an.id,
+          'period': '2027-01-01',
+          'amount': 1,
+        }),
+        throwsA(isA<PostgrestException>()),
+      );
     },
   );
 }

@@ -9,6 +9,14 @@ abstract interface class PhotoSharer {
   /// Mở bảng chia sẻ của máy với ảnh vuông của một khoản chi. [origin] là vùng
   /// trên màn hình để iPad neo bảng chia sẻ vào.
   Future<void> share(Uint8List photo, {ui.Rect? origin});
+
+  /// Chia sẻ một ảnh PNG do app tự dựng (ví dụ tổng kết tháng), giữ nguyên
+  /// khổ ảnh.
+  Future<void> shareImage(
+    Uint8List png, {
+    required String fileName,
+    ui.Rect? origin,
+  });
 }
 
 class SystemPhotoSharer implements PhotoSharer {
@@ -19,6 +27,21 @@ class SystemPhotoSharer implements PhotoSharer {
       ShareParams(
         files: [XFile.fromData(square, mimeType: 'image/jpeg')],
         fileNameOverrides: const ['tach.jpg'],
+        sharePositionOrigin: origin,
+      ),
+    );
+  }
+
+  @override
+  Future<void> shareImage(
+    Uint8List png, {
+    required String fileName,
+    ui.Rect? origin,
+  }) async {
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile.fromData(png, mimeType: 'image/png')],
+        fileNameOverrides: [fileName],
         sharePositionOrigin: origin,
       ),
     );

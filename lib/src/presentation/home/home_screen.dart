@@ -15,10 +15,12 @@ import '../feed/feed_background.dart';
 import '../group/create_group_screen.dart';
 import '../group/groups_sheet.dart';
 import '../group/join_group_sheet.dart';
+import '../jar/budget_cubit.dart';
 import '../ledger/ledger_cubit.dart';
-import '../month/month_grid_screen.dart';
+import '../month/month_screen.dart';
 import '../profile/profile_screen.dart';
 import '../widgets/member_avatar.dart';
+import '../widgets/side_slide_route.dart';
 import '../widgets/tach_mark.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -35,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _photoColors = PhotoColors();
   final _cameraColor = ValueNotifier<Color?>(null);
   StreamSubscription<void>? _saveFailures;
+  StreamSubscription<void>? _budgetFailures;
   StreamSubscription<LedgerState>? _ledgerChanges;
 
   /// Khoản chi đang xem ở bảng tin; `null` khi đang ở camera.
@@ -51,18 +54,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _ledgerChanges = context.read<LedgerCubit>().stream.listen(
       _keepShownExpense,
     );
-    _saveFailures = context.read<LedgerCubit>().saveFailures.listen((_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Chưa lưu được thay đổi vừa rồi. Kiểm tra mạng rồi thử lại.',
-            ),
+    _saveFailures = context.read<LedgerCubit>().saveFailures.listen(
+      _tellSaveFailed,
+    );
+    _budgetFailures = context.read<BudgetCubit>().saveFailures.listen(
+      _tellSaveFailed,
+    );
+  }
+
+  void _tellSaveFailed(void _) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Chưa lưu được thay đổi vừa rồi. Kiểm tra mạng rồi thử lại.',
           ),
-        );
-    });
+        ),
+      );
   }
 
   @override
@@ -76,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _saveFailures?.cancel();
+    _budgetFailures?.cancel();
     _ledgerChanges?.cancel();
     _pages.dispose();
     _photoColors.dispose();
@@ -120,18 +131,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _openMonth() async {
-    final expenseId = await Navigator.of(
-      context,
-    ).push<String>(MaterialPageRoute(builder: (_) => const MonthGridScreen()));
-    if (expenseId == null || !mounted) return;
-    final expenses = context.read<LedgerCubit>().state.expenses;
-    final index = expenses.indexWhere((e) => e.id == expenseId);
-    if (index >= 0) _pages.jumpToPage(index + 1);
+    final picked = await Navigator.of(context).push<PickedExpense>(
+      SideSlideRoute(fromLeft: true, builder: (_) => const MonthScreen()),
+    );
+    if (picked == null || !mounted) return;
+    // Lịch gộp mọi nhóm, nên khoản được chọn có thể thuộc nhóm khác.
+    final cubit = context.read<LedgerCubit>()..switchGroup(picked.groupId);
+    final index = cubit.state.expenses.indexWhere(
+      (e) => e.id == picked.expenseId,
+    );
+    if (index < 0) return;
+    // Chờ PageView dựng lại theo nhóm mới rồi mới nhảy trang.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _pages.hasClients) _pages.jumpToPage(index + 1);
+    });
   }
 
   void _openBalance() {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const BalanceScreen()));
+    Navigator.of(context).push(
+      SideSlideRoute<void>(
+        fromLeft: false,
+        builder: (_) => const BalanceScreen(),
+      ),
+    );
   }
 
   Future<void> _openGroups() async {
@@ -147,6 +169,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     switch (result) {
       case OpenGroup(:final groupId):
         cubit.switchGroup(groupId);
+      case OpenPersonal():
+        cubit.openPersonal();
       case CreateNewGroup():
         await Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const CreateGroupScreen()),
@@ -161,7 +185,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _openProfile() {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
+      SideSlideRoute<void>(
+        fromLeft: false,
         builder: (_) => ProfileScreen(
           onSignOut: () {
             Navigator.of(context).popUntil((route) => route.isFirst);
@@ -174,8 +199,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _onSwipeEnd(DragEndDetails details) {
     final velocity = details.primaryVelocity ?? 0;
-    final draggedFar = _swipeDx < -72 && velocity <= 0;
-    if (draggedFar || velocity < -600) _openProfile();
+    final towardsLeft = (_swipeDx < -72 && velocity <= 0) || velocity < -600;
+    final towardsRight = (_swipeDx > 72 && velocity >= 0) || velocity > 600;
+    if (towardsLeft) {
+      // Vuốt từ phải sang trái: màn mới vào từ bên phải. Ở camera là hồ sơ,
+      // đang xem bảng tin là số dư.
+      if (_onFeed) {
+        _openBalance();
+      } else {
+        _openProfile();
+      }
+    } else if (towardsRight) {
+      // Vuốt từ trái sang phải: lịch tháng vào từ bên trái.
+      if (context.read<LedgerCubit>().state.hasGroup) _openMonth();
+    }
   }
 
   @override

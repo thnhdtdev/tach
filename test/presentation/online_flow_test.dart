@@ -10,6 +10,7 @@ import 'package:tach/src/domain/entities/group.dart';
 import 'package:tach/src/domain/repositories/group_repository.dart';
 import 'package:tach/src/services/auth/auth_service.dart';
 import 'package:tach/src/services/camera/capture_camera.dart';
+import 'package:tach/src/services/drafts/draft_store.dart';
 
 class _GuestAuth implements AuthService {
   _GuestAuth({this.signedIn = false});
@@ -17,20 +18,45 @@ class _GuestAuth implements AuthService {
   bool signedIn;
   var refuses = false;
 
+  /// Các cách đăng nhập bằng tài khoản thật đã được cấu hình.
+  var accounts = <SignInMethod>[];
+
+  /// Người dùng đóng bảng đăng nhập của Apple hoặc Google giữa chừng.
+  var userCancels = false;
+  var guest = true;
+  final signedInWith = <SignInMethod>[];
+
   @override
-  List<SignInMethod> get methods => const [SignInMethod.guest];
+  List<SignInMethod> get methods => [...accounts, SignInMethod.guest];
 
   @override
   bool get isSignedIn => signedIn;
 
   @override
-  bool get isGuest => true;
+  bool get isGuest => guest;
+
+  @override
+  List<SignInMethod> get linkMethods => guest ? accounts : const [];
+
+  @override
+  Future<void> link(SignInMethod method) async {
+    if (userCancels) throw const SignInCancelled();
+    if (refuses) {
+      throw const SignInException('Tài khoản này đã gắn với tài khoản khác.');
+    }
+    guest = false;
+  }
 
   @override
   Future<void> signIn(SignInMethod method) async {
+    if (userCancels && method != SignInMethod.guest) {
+      throw const SignInCancelled();
+    }
     if (refuses) {
       throw const SignInException('Không kết nối được máy chủ.');
     }
+    signedInWith.add(method);
+    guest = method == SignInMethod.guest;
     signedIn = true;
   }
 
@@ -132,7 +158,9 @@ Future<void> _launch(WidgetTester tester, {bool signedIn = false}) async {
     ..unregister<GroupRepository>()
     ..registerSingleton<GroupRepository>(_server)
     ..unregister<CaptureCamera>()
-    ..registerFactory<CaptureCamera>(_NoCamera.new);
+    ..registerFactory<CaptureCamera>(_NoCamera.new)
+    ..unregister<DraftStore>()
+    ..registerSingleton<DraftStore>(MemoryDraftStore());
 }
 
 void main() {
@@ -239,5 +267,68 @@ void main() {
 
     expect(_auth.signedIn, isTrue);
     expect(find.text('Đà Lạt'), findsOneWidget);
+  });
+
+  testWidgets(
+    'có Apple và Google: hủy giữa chừng thì không báo lỗi, đăng nhập được thì vào',
+    (tester) async {
+      await _launch(tester);
+      _auth.accounts = [SignInMethod.apple, SignInMethod.google];
+      _server.name = 'Dat';
+      await tester.pumpWidget(const TachApp());
+      await tester.pumpAndSettle();
+      expect(find.text('Tiếp tục với Apple'), findsOneWidget);
+      expect(find.text('Dùng thử không cần tài khoản'), findsOneWidget);
+      expect(find.text('Bắt đầu dùng thử'), findsNothing);
+
+      _auth.userCancels = true;
+      await tester.tap(find.text('Tiếp tục với Google'));
+      await tester.pumpAndSettle();
+      expect(_auth.signedIn, isFalse);
+      expect(find.textContaining('hủy'), findsNothing);
+      expect(find.text('Tiếp tục với Google'), findsOneWidget);
+
+      _auth.userCancels = false;
+      await tester.tap(find.text('Tiếp tục với Google'));
+      await tester.pumpAndSettle();
+      expect(_auth.signedInWith, [SignInMethod.google]);
+      expect(find.text('Bạn chưa ở nhóm nào'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Hồ sơ'));
+      await tester.pumpAndSettle();
+      expect(find.text('Giữ dữ liệu của bạn'), findsNothing);
+    },
+  );
+
+  testWidgets('tài khoản khách liên kết với Google: thẻ nhắc biến mất', (
+    tester,
+  ) async {
+    await _launch(tester, signedIn: true);
+    _auth.accounts = [SignInMethod.apple, SignInMethod.google];
+    _server.name = 'Dat';
+    await tester.pumpWidget(const TachApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Hồ sơ'));
+    await tester.pumpAndSettle();
+    expect(find.text('Giữ dữ liệu của bạn'), findsOneWidget);
+    expect(find.text('Liên kết với Apple'), findsOneWidget);
+
+    _auth.refuses = true;
+    await tester.tap(find.text('Liên kết với Google'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Tài khoản này đã gắn với tài khoản khác.'),
+      findsOneWidget,
+    );
+    expect(_auth.isGuest, isTrue);
+
+    _auth.refuses = false;
+    await tester.tap(find.text('Liên kết với Google'));
+    await tester.pumpAndSettle();
+    expect(_auth.isGuest, isFalse);
+    expect(find.text('Giữ dữ liệu của bạn'), findsNothing);
+    expect(find.textContaining('Đã liên kết'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
   });
 }

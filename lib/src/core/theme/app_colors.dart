@@ -16,6 +16,9 @@ abstract final class TachColors {
 
   static const danger = Color(0xFFFF8A80);
 
+  /// Sắp chạm mức: hũ đã dùng từ 70%, ngày tiêu vượt mức ngày.
+  static const warn = Color(0xFFF2C94C);
+
   /// Chữ trên nền màu nhạt: avatar chữ cái, mã QR.
   static const ink = Color(0xFF14201E);
 

@@ -18,8 +18,11 @@ import '../group/join_group_sheet.dart';
 import '../ledger/ledger_cubit.dart';
 import '../widgets/info_line.dart';
 import '../widgets/member_avatar.dart';
+import '../widgets/side_slide_route.dart';
+import '../widgets/swipe_to_close.dart';
 import 'bank_account_sheet.dart';
 import 'home_widget_card.dart';
+import 'link_account_card.dart';
 import 'name_edit_sheet.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -163,6 +166,14 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Vuốt ngược với hướng màn đã trượt vào là quay về.
+    return SwipeToClose(
+      towardsRight: !openedFromLeft(context),
+      child: _screen(context),
+    );
+  }
+
+  Widget _screen(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final state = context.watch<LedgerCubit>().state;
     final me = state.me;
@@ -170,7 +181,7 @@ class ProfileScreen extends StatelessWidget {
     final groups = state.groups;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Hồ sơ')),
+      appBar: sideAppBar(context, title: const Text('Hồ sơ')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
@@ -218,7 +229,7 @@ class ProfileScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (state.hasGroup) ...[
+              if (state.inSharedGroup) ...[
                 _QuickAction(
                   icon: Icons.person_add_alt,
                   label: 'Mời bạn',
@@ -240,6 +251,7 @@ class ProfileScreen extends StatelessWidget {
               ),
             ],
           ),
+          const LinkAccountCard(),
           if (groups.isNotEmpty) ...[
             const _Heading('Nhóm của bạn'),
             _Card(

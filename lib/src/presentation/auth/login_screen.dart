@@ -28,6 +28,9 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       await _auth.signIn(method);
+    } on SignInCancelled {
+      if (mounted) setState(() => _busy = null);
+      return;
     } on SignInException catch (error) {
       if (mounted) {
         setState(() {
@@ -93,13 +96,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 12),
               ],
               for (final method in _auth.methods) ...[
-                _button(method),
+                _button(method, guestOnly: guestOnly),
                 const SizedBox(height: 10),
               ],
-              if (guestOnly)
+              if (_auth.methods.contains(SignInMethod.guest))
                 Text(
-                  'Chưa cần tài khoản. Dữ liệu gắn với máy này, xóa app là '
-                  'không vào lại được.',
+                  guestOnly
+                      ? 'Chưa cần tài khoản. Dữ liệu gắn với máy này, xóa app '
+                            'là không vào lại được.'
+                      : 'Dùng thử thì dữ liệu gắn với máy này. Bạn liên kết '
+                            'tài khoản sau trong Hồ sơ để giữ lại.',
                   textAlign: TextAlign.center,
                   style: text.bodySmall,
                 ),
@@ -125,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _button(SignInMethod method) {
+  Widget _button(SignInMethod method, {required bool guestOnly}) {
     final onPressed = _busy == null ? () => _signIn(method) : null;
     return switch (method) {
       SignInMethod.apple => FilledButton.icon(
@@ -150,9 +156,15 @@ class _LoginScreenState extends State<LoginScreen> {
         icon: const Icon(Icons.phone_iphone_outlined, size: 20),
         label: const Text('Tiếp tục với số điện thoại'),
       ),
-      SignInMethod.guest => FilledButton(
+      SignInMethod.guest when guestOnly => FilledButton(
         onPressed: onPressed,
         child: Text(_busy == method ? 'Đang vào…' : 'Bắt đầu dùng thử'),
+      ),
+      SignInMethod.guest => OutlinedButton(
+        onPressed: onPressed,
+        child: Text(
+          _busy == method ? 'Đang vào…' : 'Dùng thử không cần tài khoản',
+        ),
       ),
     };
   }

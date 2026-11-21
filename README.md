@@ -54,7 +54,9 @@ lib/
 Giao diện MVP đã dựng xong. App chạy theo hai cách:
 
 - **Nối Supabase** (`--dart-define-from-file=.env`, xem
-  [supabase/README.md](supabase/README.md)): đăng nhập bằng tài khoản khách,
+  [supabase/README.md](supabase/README.md)): đăng nhập bằng Apple, Google
+  (trên iOS, sau khi cấu hình) hoặc tài khoản khách; tài khoản khách liên kết
+  được sang Apple hoặc Google để giữ dữ liệu;
   dữ liệu nhóm, khoản chi, bình luận, cảm xúc, trả nợ và ảnh lưu trên máy chủ
   (`lib/src/datasource/supabase/`). Ảnh chụp được cắt vuông và nén trước khi
   tải lên. Người ghi sửa hoặc xóa được khoản chi của mình. Khi người khác
@@ -68,8 +70,22 @@ mới nhất kèm ảnh, cỡ vừa hiện số tiền bạn cần trả hoặc 
 khi sổ thay đổi, nên widget chỉ mới lại khi app được mở; muốn widget tự đổi
 lúc app đóng thì cần thông báo đẩy.
 
-Chưa có: đăng nhập Apple, Google, số điện thoại; thông báo đẩy; widget trên
-Android. Trên máy không có camera (trình giả lập), bản debug cho chụp ảnh
+"Hũ của tôi" (mục 10.1 trong tài liệu sản phẩm): mỗi người đặt mức chi tiêu
+tháng cho riêng mình, hũ chỉ trừ phần của họ trong mọi nhóm. Khoản chi riêng
+ghi vào "Riêng tôi" (chọn ở ô đổi nhóm trên màn chụp), không ai khác thấy. Màn tháng có hai chế độ: "Lịch" là ảnh và phần tiền của mình theo từng
+ngày trên mọi nhóm, "Lưới" là các khoản của nhóm đang mở. Chưa có thông báo
+khi hũ chạm 80%; app chỉ nhắc ngay trên thẻ hũ.
+
+Tổng kết tháng: ở chế độ "Lưới" của màn tháng có nút "Tổng kết tháng", dựng
+một tấm ảnh dọc 1080×1920 của nhóm đang mở (ảnh các khoản nổi bật, tổng chi,
+ba người trả nhiều nhất) để chia sẻ qua bảng chia sẻ của máy.
+
+Điền tiền sau: chụp lúc chưa biết giá thì bấm "Điền tiền sau" ở bước nhập
+tiền. Ảnh được giữ làm nháp trên máy (`lib/src/services/drafts/`), chưa gửi
+cho nhóm; màn chụp nhắc "N khoản chờ điền tiền" để mở lại và điền giá.
+
+Chưa có: đăng nhập bằng số điện thoại; đăng nhập Apple và Google trên
+Android; thông báo đẩy; widget trên Android. Trên máy không có camera (trình giả lập), bản debug cho chụp ảnh
 mẫu.
 
 Font chữ là Montserrat, giấy phép SIL Open Font License
@@ -92,6 +108,14 @@ chưa được ghi lại; cần xác nhận quyền sử dụng trước khi ph�
 ```bash
 flutter pub get
 flutter run
+```
+
+Chạy trên iPhone thật, nối Supabase theo `.env` (id là của máy đang dùng để
+thử; máy khác thì lấy id bằng `flutter devices`):
+
+```bash
+flutter run -d 00008110-00167DD03AE1401E --dart-define-from-file=.env
+flutter run --release -d 00008110-00167DD03AE1401E --dart-define-from-file=.env
 ```
 
 Chạy test:

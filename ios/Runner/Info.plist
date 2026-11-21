@@ -72,5 +72,16 @@
 	<string>Tach lưu ảnh khoản chi vào thư viện ảnh khi bạn chọn lưu ảnh.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Tach cần truy cập thư viện ảnh để bạn chọn ảnh đại diện.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.927689543368-useqv30gqva2l2oq4p4ttd52s2imb01o</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

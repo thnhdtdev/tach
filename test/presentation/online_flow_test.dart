@@ -10,6 +10,7 @@ import 'package:tach/src/domain/entities/group.dart';
 import 'package:tach/src/domain/repositories/group_repository.dart';
 import 'package:tach/src/services/auth/auth_service.dart';
 import 'package:tach/src/services/camera/capture_camera.dart';
+import 'package:tach/src/services/drafts/draft_store.dart';
 
 class _GuestAuth implements AuthService {
   _GuestAuth({this.signedIn = false});
@@ -157,7 +158,9 @@ Future<void> _launch(WidgetTester tester, {bool signedIn = false}) async {
     ..unregister<GroupRepository>()
     ..registerSingleton<GroupRepository>(_server)
     ..unregister<CaptureCamera>()
-    ..registerFactory<CaptureCamera>(_NoCamera.new);
+    ..registerFactory<CaptureCamera>(_NoCamera.new)
+    ..unregister<DraftStore>()
+    ..registerSingleton<DraftStore>(MemoryDraftStore());
 }
 
 void main() {

@@ -9,9 +9,12 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/format/money.dart';
+import '../../core/format/time_ago.dart';
+import '../../core/ids/uuid.dart';
 import '../../core/theme/app_colors.dart';
 import '../../dependency/injection.dart';
 import '../../services/camera/capture_camera.dart';
+import '../../services/drafts/draft_store.dart';
 import '../../services/photo/photo_color.dart';
 import '../ledger/ledger_cubit.dart';
 import '../widgets/expense_photo.dart';
@@ -46,6 +49,10 @@ class CapturePage extends StatefulWidget {
 class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   static const _maxDigits = 6;
 
+  /// Nháp chỉ để chờ vài chục phút cho biết giá; giới hạn để không ai dùng nó
+  /// làm chỗ chứa ảnh và để ảnh chưa gửi không chiếm nhiều bộ nhớ máy.
+  static const _maxDrafts = 5;
+
   static const _sampleMinZoom = 0.5;
   static const _sampleMaxZoom = 6.0;
 
@@ -74,6 +81,12 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   var _captures = 0;
   String? _toast;
   Timer? _toastTimer;
+
+  final DraftStore _draftStore = getIt<DraftStore>();
+  var _drafts = <CaptureDraft>[];
+
+  /// Bản nháp đang được điền tiền; `null` khi là ảnh vừa chụp.
+  String? _draftId;
 
   Timer? _frameColorTimer;
   Color? _viewfinderColor;
@@ -115,6 +128,12 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       const Duration(milliseconds: 800),
       (_) => _readViewfinderColor(),
     );
+    _loadDrafts();
+  }
+
+  Future<void> _loadDrafts() async {
+    final drafts = await _draftStore.load();
+    if (mounted) setState(() => _drafts = drafts);
   }
 
   bool get _viewfinderLive =>
@@ -234,6 +253,7 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       _digits = '';
       _excluded = {};
       _note.clear();
+      _draftId = null;
     });
     _setStage(_Stage.amount);
     _reportPhotoColor(photoUrl, photoBytes);
@@ -363,6 +383,80 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     });
   }
 
+  bool get _hasPhoto => _photoUrl != null || _photoBytes != null;
+
+  /// Mở lại một bản nháp ở bước nhập tiền.
+  void _resume(CaptureDraft draft) {
+    _start(photoUrl: draft.photoUrl, photoBytes: draft.photoBytes);
+    setState(() {
+      _draftId = draft.id;
+      _note.text = draft.note;
+    });
+  }
+
+  /// Giữ ảnh lại trên máy để điền tiền sau. Chưa gửi gì cho nhóm.
+  Future<void> _saveForLater() async {
+    _noteFocus.unfocus();
+    final existing = _drafts.where((d) => d.id == _draftId).firstOrNull;
+    if (existing == null && _drafts.length >= _maxDrafts) {
+      _showToast(
+        'Đang có $_maxDrafts khoản chờ điền tiền. Điền hoặc xóa bớt rồi lưu '
+        'tiếp nhé.',
+      );
+      return;
+    }
+    final draft =
+        (existing ??
+                CaptureDraft(
+                  id: newUuid(),
+                  createdAt: DateTime.now(),
+                  photoBytes: _photoBytes,
+                  photoUrl: _photoUrl,
+                ))
+            .withNote(_note.text.trim());
+    setState(() {
+      _drafts = existing == null
+          ? [..._drafts, draft]
+          : [
+              for (final d in _drafts)
+                if (d.id == draft.id) draft else d,
+            ];
+    });
+    _showToast('Đã lưu nháp. Biết giá thì điền sau nhé.');
+    _setStage(_Stage.viewfinder);
+    await _draftStore.save(draft);
+  }
+
+  Future<void> _dropDraft({String? toast}) async {
+    final id = _draftId;
+    if (id == null) return;
+    setState(() {
+      _draftId = null;
+      _drafts = [
+        for (final d in _drafts)
+          if (d.id != id) d,
+      ];
+    });
+    if (toast != null) {
+      _showToast(toast);
+      _setStage(_Stage.viewfinder);
+    }
+    await _draftStore.remove(id);
+  }
+
+  Future<void> _openDrafts() async {
+    if (_drafts.length == 1) {
+      _resume(_drafts.single);
+      return;
+    }
+    final picked = await showModalBottomSheet<CaptureDraft>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => _DraftsSheet(drafts: _drafts),
+    );
+    if (picked != null && mounted) _resume(picked);
+  }
+
   void _send(LedgerCubit cubit) {
     final state = cubit.state;
     final participants = [
@@ -385,6 +479,7 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
           : 'Đã gửi. $others người nợ bạn ${formatVnd(owedToMe)}',
     );
     _setStage(_Stage.viewfinder);
+    _dropDraft();
   }
 
   @override
@@ -664,6 +759,27 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                   textAlign: TextAlign.center,
                   style: text.titleLarge?.copyWith(shadows: shadow),
                 ),
+              // Chụp lúc món còn đẹp, ăn xong mới biết giá: giữ ảnh làm nháp.
+              // Tách khỏi nút "Tiếp" để không ai lỡ gửi khoản chưa có số tiền.
+              if (editing && _digits.isEmpty && _hasPhoto) ...[
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _OnPhotoButton(
+                      label: 'Điền tiền sau',
+                      onPressed: _saveForLater,
+                    ),
+                    if (_draftId != null) ...[
+                      const SizedBox(width: 8),
+                      _OnPhotoButton(
+                        label: 'Xóa nháp',
+                        onPressed: () => _dropDraft(toast: 'Đã xóa nháp'),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -679,6 +795,10 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (_drafts.isNotEmpty) ...[
+            _DraftChip(drafts: _drafts, onTap: _openDrafts),
+            const SizedBox(height: 2),
+          ],
           TextButton.icon(
             onPressed: _start,
             style: TextButton.styleFrom(
@@ -954,6 +1074,137 @@ class _RoundAction extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OnPhotoButton extends StatelessWidget {
+  const _OnPhotoButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.white,
+        backgroundColor: Colors.black.withValues(alpha: 0.45),
+        shape: const StadiumBorder(),
+        minimumSize: const Size(64, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+      ),
+      child: Text(label),
+    );
+  }
+}
+
+/// Nhắc trên màn chụp rằng còn ảnh đã chụp mà chưa điền tiền.
+class _DraftChip extends StatelessWidget {
+  const _DraftChip({required this.drafts, required this.onTap});
+
+  final List<CaptureDraft> drafts;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final latest = drafts.last;
+    return Material(
+      color: TachColors.mintTint,
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(6, 6, 14, 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipOval(
+                child: SizedBox.square(
+                  dimension: 32,
+                  child: ExpensePhoto(
+                    photoUrl: latest.photoUrl,
+                    photoBytes: latest.photoBytes,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '${drafts.length} khoản chờ điền tiền',
+                style: Theme.of(context).textTheme.labelLarge
+                    ?.copyWith(color: TachColors.mintLight),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DraftsSheet extends StatelessWidget {
+  const _DraftsSheet({required this.drafts});
+
+  final List<CaptureDraft> drafts;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return SafeArea(
+      top: false,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.6,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text('Chờ điền tiền', style: text.titleLarge),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final draft in drafts.reversed)
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 2,
+                      ),
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: SizedBox.square(
+                          dimension: 48,
+                          child: ExpensePhoto(
+                            photoUrl: draft.photoUrl,
+                            photoBytes: draft.photoBytes,
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        draft.note.isEmpty ? 'Chưa có ghi chú' : draft.note,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.titleMedium,
+                      ),
+                      subtitle: Text(
+                        'Chụp ${timeAgo(draft.createdAt).toLowerCase()}',
+                        style: text.bodySmall,
+                      ),
+                      onTap: () => Navigator.of(context).pop(draft),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );

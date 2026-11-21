@@ -13,6 +13,7 @@ import '../services/auth/auth_service.dart';
 import '../services/auth/identity_provider.dart';
 import '../services/avatar/avatar_picker.dart';
 import '../services/camera/capture_camera.dart';
+import '../services/drafts/draft_store.dart';
 import '../services/home_widget/home_widget_updater.dart';
 import '../services/photo/photo_loader.dart';
 import '../services/photo/photo_sharer.dart';
@@ -25,6 +26,7 @@ void configureDependencies({SupabaseClient? supabase}) {
     ..registerLazySingleton<AppPreferences>(AppPreferences.new)
     ..registerLazySingleton<AvatarPicker>(ImagePickerAvatarPicker.new)
     ..registerLazySingleton<PhotoSharer>(SystemPhotoSharer.new)
+    ..registerLazySingleton<DraftStore>(FileDraftStore.new)
     // Widget mới chỉ có trên iOS.
     ..registerLazySingleton<HomeWidgetUpdater>(
       () => defaultTargetPlatform == TargetPlatform.iOS

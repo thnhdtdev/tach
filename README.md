@@ -80,6 +80,10 @@ Tổng kết tháng: ở chế độ "Lưới" của màn tháng có nút "Tổn
 một tấm ảnh dọc 1080×1920 của nhóm đang mở (ảnh các khoản nổi bật, tổng chi,
 ba người trả nhiều nhất) để chia sẻ qua bảng chia sẻ của máy.
 
+Điền tiền sau: chụp lúc chưa biết giá thì bấm "Điền tiền sau" ở bước nhập
+tiền. Ảnh được giữ làm nháp trên máy (`lib/src/services/drafts/`), chưa gửi
+cho nhóm; màn chụp nhắc "N khoản chờ điền tiền" để mở lại và điền giá.
+
 Chưa có: đăng nhập bằng số điện thoại; đăng nhập Apple và Google trên
 Android; thông báo đẩy; widget trên Android. Trên máy không có camera (trình giả lập), bản debug cho chụp ảnh
 mẫu.

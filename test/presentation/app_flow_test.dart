@@ -143,6 +143,15 @@ class _FakeSharer implements PhotoSharer {
   @override
   Future<void> share(Uint8List photo, {Rect? origin}) async =>
       shared.add(photo);
+
+  final sharedImages = <(String, Uint8List)>[];
+
+  @override
+  Future<void> shareImage(
+    Uint8List png, {
+    required String fileName,
+    Rect? origin,
+  }) async => sharedImages.add((fileName, png));
 }
 
 late _FakeCamera _camera;
@@ -487,6 +496,55 @@ void main() {
       expect(find.bySemanticsLabel('Về camera').hitTestable(), findsOneWidget);
     },
   );
+
+  testWidgets('tổng kết tháng: xem ảnh ghép rồi chia sẻ', (tester) async {
+    await _launch(tester);
+    await _signIn(tester);
+    final cubit = tester.element(find.byType(HomeScreen)).read<LedgerCubit>();
+    cubit.addExpense(
+      amount: 320000,
+      note: 'Lẩu',
+      participantIds: cubit.state.group.members.map((m) => m.id).toList(),
+      photoBytes: _tinyPng,
+    );
+    await tester.pumpAndSettle();
+    final now = DateTime.now();
+    final total = cubit.state.expenses
+        .where((e) => e.createdAt.month == now.month)
+        .fold(0, (sum, e) => sum + e.amount);
+
+    await tester.tap(find.textContaining('vừa ghi'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Cả tháng'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Lưới'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tổng kết tháng'));
+    await tester.pumpAndSettle();
+    expect(find.text('Đang tải ảnh…'), findsOneWidget);
+    // Giải mã ảnh cần thời gian thật, không chạy trong đồng hồ giả của test.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 300)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tổng kết tháng ${now.month}'), findsOneWidget);
+    expect(find.text('Tháng ${now.month}'), findsOneWidget);
+    expect(find.text('Trọ 12'), findsOneWidget);
+    expect(find.text(formatVnd(total)), findsOneWidget);
+    expect(find.textContaining('đã trả'), findsWidgets);
+
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Chia sẻ'));
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+    });
+    await tester.pumpAndSettle();
+
+    final (name, png) = _sharer.sharedImages.single;
+    expect(name, 'tach-thang-${now.month}.png');
+    // Chữ ký của file PNG.
+    expect(png.sublist(0, 4), [0x89, 0x50, 0x4E, 0x47]);
+  });
 
   testWidgets('bình luận: trả lời theo luồng', (tester) async {
     await _launch(tester);

@@ -12,6 +12,7 @@ import '../jar/jar_screen.dart';
 import '../jar/jar_sheet.dart';
 import '../jar/jar_view.dart';
 import '../ledger/ledger_cubit.dart';
+import '../recap/month_recap_screen.dart';
 import '../widgets/expense_photo.dart';
 import '../widgets/side_slide_route.dart';
 import '../widgets/swipe_to_close.dart';
@@ -176,6 +177,24 @@ class _MonthScreenState extends State<MonthScreen> {
                     style: text.bodyMedium,
                   ),
                   Text(formatVnd(groupTotal), style: text.displaySmall),
+                  if (inMonth.isNotEmpty && !state.group.isPersonal) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => MonthRecapScreen(month: _month),
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 44),
+                        ),
+                        icon: const Icon(Icons.auto_awesome_mosaic, size: 20),
+                        label: const Text('Tổng kết tháng'),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   if (!state.group.isPersonal) ...[
                     _MyBalanceCard(myNet: state.myNet),

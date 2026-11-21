@@ -76,6 +76,10 @@ ghi vào "Riêng tôi" (chọn ở ô đổi nhóm trên màn chụp), không ai
 ngày trên mọi nhóm, "Lưới" là các khoản của nhóm đang mở. Chưa có thông báo
 khi hũ chạm 80%; app chỉ nhắc ngay trên thẻ hũ.
 
+Tổng kết tháng: ở chế độ "Lưới" của màn tháng có nút "Tổng kết tháng", dựng
+một tấm ảnh dọc 1080×1920 của nhóm đang mở (ảnh các khoản nổi bật, tổng chi,
+ba người trả nhiều nhất) để chia sẻ qua bảng chia sẻ của máy.
+
 Chưa có: đăng nhập bằng số điện thoại; đăng nhập Apple và Google trên
 Android; thông báo đẩy; widget trên Android. Trên máy không có camera (trình giả lập), bản debug cho chụp ảnh
 mẫu.
